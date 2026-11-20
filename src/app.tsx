@@ -23,7 +23,6 @@ export function App() {
 
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
 
-  // Load initial data
   useEffect(() => {
     async function loadData() {
       const [bList, eList, pList] = await Promise.all([
@@ -44,7 +43,6 @@ export function App() {
     loadData();
   }, [searchQuery]);
 
-  // Global Keyboard Shortcuts (⌘K, ⌘⇧S)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
@@ -77,8 +75,8 @@ export function App() {
   const unreadCount = emails.filter((e) => !e.is_read).length;
 
   return (
-    <div className="flex flex-col h-screen w-screen overflow-hidden bg-[#0d0f12] text-neutral-200">
-      {/* Frameless macOS Top Bar with Drag Region */}
+    <div className="flex flex-col h-screen w-screen overflow-hidden bg-[#18181a] text-[#f5f5f7]">
+      {/* Apple-Style Minimal Toolbar */}
       <TopBar
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
@@ -86,9 +84,9 @@ export function App() {
         emails={emails}
       />
 
-      {/* Main 3-Pane Desktop Workspace */}
+      {/* Main 3-Pane Layout */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Pane 1: Sidebar Navigation */}
+        {/* Pane 1: Sidebar */}
         <Sidebar
           activeTab={activeTab}
           onTabChange={setActiveTab}
@@ -97,14 +95,18 @@ export function App() {
           healthyProjectsCount={projects.length}
         />
 
-        {/* Pane 2: Feed / List View */}
-        <div className="w-80 border-r border-white/8 bg-[#101318] flex flex-col shrink-0">
-          <div className="p-3 border-b border-white/5 flex items-center justify-between">
-            <span className="text-xs font-semibold text-neutral-300 capitalize">
-              {activeTab === 'vault' ? 'Bookmarks & Repos' : activeTab === 'inbox' ? 'Triage Feed' : 'Telemetry Status'}
+        {/* Pane 2: List Feed */}
+        <div className="w-72 border-r border-white/[0.06] bg-[#1c1c1e] flex flex-col shrink-0">
+          <div className="h-10 border-b border-white/[0.06] flex items-center justify-between px-4 shrink-0">
+            <span className="text-[12px] font-semibold text-[#86868b] uppercase tracking-wider">
+              {activeTab === 'vault' ? 'Bookmarks' : activeTab === 'inbox' ? 'Inbox' : 'Pulse'}
             </span>
-            <span className="text-[10px] text-neutral-500 font-mono">
-              {activeTab === 'vault' ? `${bookmarks.length} items` : activeTab === 'inbox' ? `${emails.length} threads` : `${projects.length} nodes`}
+            <span className="text-[11px] text-[#636366] font-mono">
+              {activeTab === 'vault'
+                ? bookmarks.length
+                : activeTab === 'inbox'
+                ? emails.length
+                : projects.length}
             </span>
           </div>
 
@@ -133,8 +135,8 @@ export function App() {
           )}
         </div>
 
-        {/* Pane 3: Detail / Action Inspector */}
-        <div className="flex-1 bg-[#0d0f12] flex flex-col overflow-hidden">
+        {/* Pane 3: Detail View */}
+        <div className="flex-1 bg-[#161618] flex flex-col overflow-hidden">
           {activeTab === 'vault' && (
             <DetailPane item={selectedBookmark} type="bookmark" />
           )}

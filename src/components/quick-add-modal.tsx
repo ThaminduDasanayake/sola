@@ -1,10 +1,4 @@
 import React, { useState } from 'react';
-import {
-  X as XIcon,
-  Sparkle as SparkleIcon,
-  Plus as PlusIcon,
-  Link as LinkIcon,
-} from '@phosphor-icons/react';
 import type { Bookmark } from '../types';
 
 interface QuickAddModalProps {
@@ -22,31 +16,23 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [tagsInput, setTagsInput] = useState('');
-  const [isAutoTagging, setIsAutoTagging] = useState(false);
 
   if (!isOpen) return null;
 
-  const handleAutoFill = () => {
-    if (!url) return;
-    setIsAutoTagging(true);
-
+  const handleUrlBlur = () => {
+    if (!url.trim()) return;
     try {
       const parsed = new URL(url.startsWith('http') ? url : `https://${url}`);
       const domain = parsed.hostname.replace('www.', '');
-      const pathSegment = parsed.pathname.split('/').filter(Boolean).pop() || '';
-      const fallbackTitle = pathSegment ? `${pathSegment} - ${domain}` : domain;
-
-      if (!title) setTitle(fallbackTitle);
-
-      const generatedTags = [domain.split('.')[0]];
-      if (domain.includes('github')) generatedTags.push('code', 'open-source');
-      if (domain.includes('docs') || url.includes('doc')) generatedTags.push('documentation');
-      if (!tagsInput) setTagsInput(generatedTags.join(', '));
-      if (!description) setDescription(`Captured resource from ${domain}. Indexed into local FTS5 SQLite table.`);
+      const path = parsed.pathname.split('/').filter(Boolean).pop() || '';
+      if (!title) setTitle(path ? `${path} — ${domain}` : domain);
+      if (!tagsInput) {
+        const t = [domain.split('.')[0]];
+        if (domain.includes('github')) t.push('code');
+        setTagsInput(t.join(', '));
+      }
     } catch {
-      // invalid url
-    } finally {
-      setIsAutoTagging(false);
+      // ignore
     }
   };
 
@@ -64,7 +50,6 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
       title: title.trim() || url.trim(),
       description: description.trim(),
       tags,
-      ai_notes: `Auto-indexed via Quick Capture. Key domain: ${new URL(url.startsWith('http') ? url : `https://${url}`).hostname}`,
     });
 
     setUrl('');
@@ -75,102 +60,81 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-[#141820] border border-white/10 rounded-xl w-full max-w-md shadow-2xl overflow-hidden">
-        <div className="flex items-center justify-between p-4 border-b border-white/8">
-          <div className="flex items-center gap-2">
-            <LinkIcon className="w-4 h-4 text-blue-400" />
-            <h3 className="text-xs font-semibold text-neutral-100">Quick Capture URL (⌘⇧S)</h3>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-1 text-neutral-400 hover:text-white rounded-md hover:bg-white/5"
-          >
-            <XIcon className="w-4 h-4" />
-          </button>
-        </div>
+    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="bg-[#242426] border border-white/10 rounded-xl w-full max-w-sm shadow-2xl overflow-hidden p-5 space-y-4">
+        <h3 className="text-[14px] font-semibold text-[#f5f5f7]">
+          Add Bookmark
+        </h3>
 
-        <form onSubmit={handleSubmit} className="p-4 space-y-3">
+        <form onSubmit={handleSubmit} className="space-y-3.5">
           <div>
-            <label className="block text-[11px] font-medium text-neutral-400 mb-1">
+            <label className="block text-[11px] font-medium text-[#86868b] mb-1">
               URL
             </label>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                autoFocus
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                onBlur={handleAutoFill}
-                placeholder="https://github.com/..."
-                className="flex-1 bg-[#0e1116] border border-white/10 rounded-md px-3 py-1.5 text-xs text-neutral-200 focus:outline-none focus:border-blue-500 font-mono"
-                required
-              />
-              <button
-                type="button"
-                onClick={handleAutoFill}
-                className="px-2.5 py-1.5 text-[11px] bg-white/5 hover:bg-white/10 border border-white/10 rounded-md text-neutral-300 flex items-center gap-1"
-                title="Simulate Gemini AI Auto-Tagging"
-              >
-                <SparkleIcon className="w-3 h-3 text-blue-400" />
-                <span>Auto-Tag</span>
-              </button>
-            </div>
+            <input
+              type="text"
+              autoFocus
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              onBlur={handleUrlBlur}
+              placeholder="https://"
+              className="w-full bg-[#1c1c1e] border border-white/10 rounded-md px-2.5 py-1.5 text-[13px] text-[#f5f5f7] focus:outline-none focus:ring-1 focus:ring-[#0a84ff]"
+              required
+            />
           </div>
 
           <div>
-            <label className="block text-[11px] font-medium text-neutral-400 mb-1">
+            <label className="block text-[11px] font-medium text-[#86868b] mb-1">
               Title
             </label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Descriptive title"
-              className="w-full bg-[#0e1116] border border-white/10 rounded-md px-3 py-1.5 text-xs text-neutral-200 focus:outline-none focus:border-blue-500"
+              placeholder="Title"
+              className="w-full bg-[#1c1c1e] border border-white/10 rounded-md px-2.5 py-1.5 text-[13px] text-[#f5f5f7] focus:outline-none focus:ring-1 focus:ring-[#0a84ff]"
             />
           </div>
 
           <div>
-            <label className="block text-[11px] font-medium text-neutral-400 mb-1">
-              Tags (comma separated)
+            <label className="block text-[11px] font-medium text-[#86868b] mb-1">
+              Tags
             </label>
             <input
               type="text"
               value={tagsInput}
               onChange={(e) => setTagsInput(e.target.value)}
-              placeholder="e.g. react, performance, rust"
-              className="w-full bg-[#0e1116] border border-white/10 rounded-md px-3 py-1.5 text-xs text-neutral-200 focus:outline-none focus:border-blue-500 font-mono"
+              placeholder="Separated by comma"
+              className="w-full bg-[#1c1c1e] border border-white/10 rounded-md px-2.5 py-1.5 text-[13px] text-[#f5f5f7] focus:outline-none focus:ring-1 focus:ring-[#0a84ff]"
             />
           </div>
 
           <div>
-            <label className="block text-[11px] font-medium text-neutral-400 mb-1">
-              Notes / Description
+            <label className="block text-[11px] font-medium text-[#86868b] mb-1">
+              Notes
             </label>
             <textarea
               rows={2}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Summary notes..."
-              className="w-full bg-[#0e1116] border border-white/10 rounded-md px-3 py-1.5 text-xs text-neutral-200 focus:outline-none focus:border-blue-500"
+              placeholder="Optional notes"
+              className="w-full bg-[#1c1c1e] border border-white/10 rounded-md px-2.5 py-1.5 text-[13px] text-[#f5f5f7] focus:outline-none focus:ring-1 focus:ring-[#0a84ff] resize-none"
             />
           </div>
 
-          <div className="flex justify-end gap-2 pt-2 border-t border-white/8">
+          <div className="flex justify-end gap-2 pt-2">
             <button
               type="button"
               onClick={onClose}
-              className="px-3 py-1.5 text-xs text-neutral-400 hover:text-white rounded-md hover:bg-white/5"
+              className="px-3 py-1 text-[12px] text-[#86868b] hover:text-[#f5f5f7] transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-3.5 py-1.5 text-xs bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-md shadow-sm transition-colors flex items-center gap-1.5"
+              className="px-3 py-1 text-[12px] bg-[#0a84ff] hover:bg-[#0077ed] text-white font-medium rounded-md transition-colors"
             >
-              <PlusIcon className="w-3.5 h-3.5" />
-              <span>Save to SQLite</span>
+              Add
             </button>
           </div>
         </form>

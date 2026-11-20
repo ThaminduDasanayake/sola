@@ -21,7 +21,7 @@ export const VaultFeed: React.FC<VaultFeedProps> = ({
   }
 
   return (
-    <div className="flex-1 overflow-y-auto px-2 py-1.5 space-y-0.5">
+    <div className="flex-1 overflow-y-auto px-2 py-1.5 space-y-1">
       {bookmarks.map((item) => {
         const isSelected = item.id === selectedId;
         const host = new URL(
@@ -32,23 +32,23 @@ export const VaultFeed: React.FC<VaultFeedProps> = ({
           <div
             key={item.id}
             onClick={() => onSelect(item)}
-            className={`px-3 py-2 rounded-lg cursor-pointer transition-colors ${
+            className={`px-3 py-2.5 rounded-lg cursor-pointer transition-all ${
               isSelected
-                ? 'bg-[#0a84ff] text-white'
-                : 'hover:bg-white/[0.04] text-[#f5f5f7]'
+                ? 'bg-[#2a2417] border border-amber-500/35 shadow-sm'
+                : 'hover:bg-white/[0.04] border border-transparent'
             }`}
           >
-            <div className="flex items-center justify-between gap-2 mb-0.5">
+            <div className="flex items-center justify-between gap-2 mb-1">
               <span
                 className={`text-[11px] font-medium truncate ${
-                  isSelected ? 'text-white/80' : 'text-[#86868b]'
+                  isSelected ? 'text-amber-400' : 'text-[#86868b]'
                 }`}
               >
                 {host}
               </span>
               <span
                 className={`text-[11px] shrink-0 font-normal ${
-                  isSelected ? 'text-white/70' : 'text-[#86868b]'
+                  isSelected ? 'text-amber-300/80' : 'text-[#86868b]'
                 }`}
               >
                 {new Date(item.created_at).toLocaleDateString([], {
@@ -60,7 +60,7 @@ export const VaultFeed: React.FC<VaultFeedProps> = ({
 
             <h3
               className={`text-[13px] font-medium line-clamp-1 leading-snug ${
-                isSelected ? 'text-white' : 'text-[#f5f5f7]'
+                isSelected ? 'text-[#fbfbfb] font-semibold' : 'text-[#f0f0f3]'
               }`}
             >
               {item.title}
@@ -68,8 +68,8 @@ export const VaultFeed: React.FC<VaultFeedProps> = ({
 
             {item.description && (
               <p
-                className={`text-[12px] line-clamp-2 mt-0.5 leading-normal ${
-                  isSelected ? 'text-white/80' : 'text-[#86868b]'
+                className={`text-[12px] line-clamp-2 mt-1 leading-normal ${
+                  isSelected ? 'text-[#d6d6dc]' : 'text-[#9e9ea7]'
                 }`}
               >
                 {item.description}

@@ -13,7 +13,7 @@ export const PulseFeed: React.FC<PulseFeedProps> = ({
   onSelect,
 }) => {
   return (
-    <div className="flex-1 overflow-y-auto px-2 py-1.5 space-y-0.5">
+    <div className="flex-1 overflow-y-auto px-2 py-1.5 space-y-1">
       {projects.map((proj) => {
         const isSelected = proj.id === selectedId;
 
@@ -21,16 +21,16 @@ export const PulseFeed: React.FC<PulseFeedProps> = ({
           <div
             key={proj.id}
             onClick={() => onSelect(proj)}
-            className={`px-3 py-2.5 rounded-lg cursor-pointer transition-colors ${
+            className={`px-3 py-2.5 rounded-lg cursor-pointer transition-all ${
               isSelected
-                ? 'bg-[#0a84ff] text-white'
-                : 'hover:bg-white/[0.04] text-[#f5f5f7]'
+                ? 'bg-[#2a2417] border border-amber-500/35 shadow-sm'
+                : 'hover:bg-white/[0.04] border border-transparent'
             }`}
           >
-            <div className="flex items-center justify-between mb-0.5">
+            <div className="flex items-center justify-between mb-1">
               <span
                 className={`text-[13px] font-medium ${
-                  isSelected ? 'text-white' : 'text-[#f5f5f7]'
+                  isSelected ? 'text-[#fbfbfb] font-semibold' : 'text-[#f0f0f3]'
                 }`}
               >
                 {proj.name}
@@ -38,11 +38,7 @@ export const PulseFeed: React.FC<PulseFeedProps> = ({
               <span
                 className={`w-2 h-2 rounded-full ${
                   proj.last_status === 'healthy'
-                    ? isSelected
-                      ? 'bg-white'
-                      : 'bg-[#30d158]'
-                    : isSelected
-                    ? 'bg-amber-200'
+                    ? 'bg-[#30d158]'
                     : 'bg-[#ffd60a]'
                 }`}
               />
@@ -51,7 +47,7 @@ export const PulseFeed: React.FC<PulseFeedProps> = ({
             {proj.repo_slug && (
               <p
                 className={`text-[12px] truncate ${
-                  isSelected ? 'text-white/80' : 'text-[#86868b]'
+                  isSelected ? 'text-amber-400/90' : 'text-[#86868b]'
                 }`}
               >
                 {proj.repo_slug}
@@ -59,8 +55,10 @@ export const PulseFeed: React.FC<PulseFeedProps> = ({
             )}
 
             <div
-              className={`flex items-center justify-between text-[11px] mt-1.5 pt-1.5 border-t ${
-                isSelected ? 'border-white/20 text-white/80' : 'border-white/[0.06] text-[#86868b]'
+              className={`flex items-center justify-between text-[11px] mt-2 pt-1.5 border-t ${
+                isSelected
+                  ? 'border-amber-500/20 text-amber-200/80'
+                  : 'border-white/[0.06] text-[#86868b]'
               }`}
             >
               <span>{proj.open_prs ?? 0} open pull requests</span>

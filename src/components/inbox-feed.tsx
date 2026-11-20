@@ -21,7 +21,7 @@ export const InboxFeed: React.FC<InboxFeedProps> = ({
   }
 
   return (
-    <div className="flex-1 overflow-y-auto px-2 py-1.5 space-y-0.5">
+    <div className="flex-1 overflow-y-auto px-2 py-1.5 space-y-1">
       {emails.map((item) => {
         const isSelected = item.id === selectedId;
         const senderName = item.sender.split('<')[0].trim();
@@ -30,24 +30,20 @@ export const InboxFeed: React.FC<InboxFeedProps> = ({
           <div
             key={item.id}
             onClick={() => onSelect(item)}
-            className={`px-3 py-2 rounded-lg cursor-pointer transition-colors ${
+            className={`px-3 py-2.5 rounded-lg cursor-pointer transition-all ${
               isSelected
-                ? 'bg-[#0a84ff] text-white'
-                : 'hover:bg-white/[0.04] text-[#f5f5f7]'
+                ? 'bg-[#2a2417] border border-amber-500/35 shadow-sm'
+                : 'hover:bg-white/[0.04] border border-transparent'
             }`}
           >
-            <div className="flex items-center justify-between gap-2 mb-0.5">
+            <div className="flex items-center justify-between gap-2 mb-1">
               <div className="flex items-center gap-1.5 truncate">
                 {!item.is_read && (
-                  <span
-                    className={`w-2 h-2 rounded-full shrink-0 ${
-                      isSelected ? 'bg-white' : 'bg-[#0a84ff]'
-                    }`}
-                  />
+                  <span className="w-2 h-2 rounded-full bg-[#f59e0b] shrink-0 shadow-[0_0_6px_rgba(245,158,11,0.5)]" />
                 )}
                 <span
                   className={`text-[12px] font-semibold truncate ${
-                    isSelected ? 'text-white' : 'text-[#f5f5f7]'
+                    isSelected ? 'text-amber-300' : 'text-[#f0f0f3]'
                   }`}
                 >
                   {senderName}
@@ -55,7 +51,7 @@ export const InboxFeed: React.FC<InboxFeedProps> = ({
               </div>
               <span
                 className={`text-[11px] shrink-0 ${
-                  isSelected ? 'text-white/70' : 'text-[#86868b]'
+                  isSelected ? 'text-amber-300/80' : 'text-[#86868b]'
                 }`}
               >
                 {new Date(item.received_at).toLocaleTimeString([], {
@@ -67,15 +63,15 @@ export const InboxFeed: React.FC<InboxFeedProps> = ({
 
             <h3
               className={`text-[13px] font-medium line-clamp-1 leading-snug ${
-                isSelected ? 'text-white' : 'text-[#f5f5f7]'
+                isSelected ? 'text-[#fbfbfb] font-semibold' : 'text-[#f0f0f3]'
               }`}
             >
               {item.subject}
             </h3>
 
             <p
-              className={`text-[12px] line-clamp-2 mt-0.5 leading-normal ${
-                isSelected ? 'text-white/80' : 'text-[#86868b]'
+              className={`text-[12px] line-clamp-2 mt-1 leading-normal ${
+                isSelected ? 'text-[#d6d6dc]' : 'text-[#9e9ea7]'
               }`}
             >
               {item.ai_summary || item.snippet}

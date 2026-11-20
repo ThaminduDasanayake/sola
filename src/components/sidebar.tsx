@@ -41,7 +41,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   ];
 
   return (
-    <aside className="w-52 bg-[#18181a] border-r border-white/[0.06] flex flex-col justify-between select-none shrink-0 h-[calc(100vh-2.75rem)] py-3">
+    <aside className="w-52 bg-[#17171a] border-r border-white/[0.06] flex flex-col justify-between select-none shrink-0 h-[calc(100vh-2.75rem)] py-3">
       <nav className="space-y-0.5 px-2">
         {navItems.map((item) => {
           const isActive = activeTab === item.id;
@@ -51,20 +51,25 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <button
               key={item.id}
               onClick={() => onTabChange(item.id)}
-              className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-[13px] font-normal transition-colors ${
+              className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-[13px] transition-all ${
                 isActive
-                  ? 'bg-[#0a84ff] text-white font-medium'
-                  : 'text-[#d1d1d6] hover:bg-white/[0.05]'
+                  ? 'bg-[#f59e0b] text-[#121214] font-semibold shadow-sm'
+                  : 'text-[#d1d1d6] hover:bg-white/[0.05] hover:text-[#f7f7f8]'
               }`}
             >
               <div className="flex items-center gap-2.5">
-                <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-[#86868b]'}`} />
+                <Icon
+                  className={`w-4 h-4 ${
+                    isActive ? 'text-[#121214]' : 'text-[#86868b]'
+                  }`}
+                  weight={isActive ? 'bold' : 'regular'}
+                />
                 <span>{item.label}</span>
               </div>
               {item.count !== undefined && (
                 <span
-                  className={`text-[11px] font-mono ${
-                    isActive ? 'text-white/80' : 'text-[#86868b]'
+                  className={`text-[11px] font-mono font-medium ${
+                    isActive ? 'text-[#121214]/80' : 'text-[#86868b]'
                   }`}
                 >
                   {item.count}

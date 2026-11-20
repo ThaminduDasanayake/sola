@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import './App.css';
-import { TopBar } from './components/TopBar';
-import { Sidebar } from './components/Sidebar';
-import { VaultFeed } from './components/VaultFeed';
-import { InboxFeed } from './components/InboxFeed';
-import { PulseFeed } from './components/PulseFeed';
-import { DetailPane } from './components/DetailPane';
-import { QuickAddModal } from './components/QuickAddModal';
+import './app.css';
+import { TopBar } from './components/top-bar';
+import { Sidebar } from './components/sidebar';
+import { VaultFeed } from './components/vault-feed';
+import { InboxFeed } from './components/inbox-feed';
+import { PulseFeed } from './components/pulse-feed';
+import { DetailPane } from './components/detail-pane';
+import { QuickAddModal } from './components/quick-add-modal';
 import { fetchBookmarks, fetchEmails, fetchProjects, addBookmark } from './services/db';
 import type { Bookmark, EmailThread, ProjectTelemetry, ActiveTab } from './types';
 

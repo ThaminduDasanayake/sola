@@ -1,13 +1,4 @@
 import React from 'react';
-import {
-  Envelope as EnvelopeIcon,
-  WarningCircle as WarningCircleIcon,
-  Newspaper as NewspaperIcon,
-  TerminalWindow as TerminalWindowIcon,
-  Receipt as ReceiptIcon,
-  CheckCircle as CheckCircleIcon,
-  Clock as ClockIcon,
-} from '@phosphor-icons/react';
 import type { EmailThread } from '../types';
 
 interface InboxFeedProps {
@@ -16,21 +7,6 @@ interface InboxFeedProps {
   onSelect: (email: EmailThread) => void;
 }
 
-const CategoryIcon: React.FC<{ category: EmailThread['category'] }> = ({ category }) => {
-  switch (category) {
-    case 'Action':
-      return <WarningCircleIcon className="w-3.5 h-3.5 text-amber-400 shrink-0" />;
-    case 'Newsletter':
-      return <NewspaperIcon className="w-3.5 h-3.5 text-purple-400 shrink-0" />;
-    case 'Dev':
-      return <TerminalWindowIcon className="w-3.5 h-3.5 text-blue-400 shrink-0" />;
-    case 'Receipt':
-      return <ReceiptIcon className="w-3.5 h-3.5 text-emerald-400 shrink-0" />;
-    default:
-      return <EnvelopeIcon className="w-3.5 h-3.5 text-neutral-400 shrink-0" />;
-  }
-};
-
 export const InboxFeed: React.FC<InboxFeedProps> = ({
   emails,
   selectedId,
@@ -38,71 +14,72 @@ export const InboxFeed: React.FC<InboxFeedProps> = ({
 }) => {
   if (emails.length === 0) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-neutral-500">
-        <CheckCircleIcon className="w-8 h-8 stroke-[1.5] mb-2 text-emerald-500/80" />
-        <p className="text-xs">Inbox zero! All threads and newsletters are triaged.</p>
+      <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-[#86868b]">
+        <p className="text-[13px]">No messages</p>
       </div>
     );
   }
 
   return (
-    <div className="flex-1 overflow-y-auto divide-y divide-white/5">
+    <div className="flex-1 overflow-y-auto px-2 py-1.5 space-y-0.5">
       {emails.map((item) => {
         const isSelected = item.id === selectedId;
+        const senderName = item.sender.split('<')[0].trim();
 
         return (
           <div
             key={item.id}
             onClick={() => onSelect(item)}
-            className={`p-3 cursor-pointer transition-colors ${
+            className={`px-3 py-2 rounded-lg cursor-pointer transition-colors ${
               isSelected
-                ? 'bg-blue-600/10 border-l-2 border-blue-500'
-                : 'hover:bg-white/[0.03] border-l-2 border-transparent'
+                ? 'bg-[#0a84ff] text-white'
+                : 'hover:bg-white/[0.04] text-[#f5f5f7]'
             }`}
           >
-            <div className="flex items-center justify-between gap-2 mb-1">
+            <div className="flex items-center justify-between gap-2 mb-0.5">
               <div className="flex items-center gap-1.5 truncate">
-                <CategoryIcon category={item.category} />
-                <span className="text-[11px] font-medium text-neutral-300 truncate">
-                  {item.sender.split('<')[0].trim()}
-                </span>
-              </div>
-              <div className="flex items-center gap-1.5 shrink-0">
                 {!item.is_read && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                  <span
+                    className={`w-2 h-2 rounded-full shrink-0 ${
+                      isSelected ? 'bg-white' : 'bg-[#0a84ff]'
+                    }`}
+                  />
                 )}
-                <span className="text-[10px] text-neutral-500 font-mono">
-                  {new Date(item.received_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                <span
+                  className={`text-[12px] font-semibold truncate ${
+                    isSelected ? 'text-white' : 'text-[#f5f5f7]'
+                  }`}
+                >
+                  {senderName}
                 </span>
               </div>
+              <span
+                className={`text-[11px] shrink-0 ${
+                  isSelected ? 'text-white/70' : 'text-[#86868b]'
+                }`}
+              >
+                {new Date(item.received_at).toLocaleTimeString([], {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </span>
             </div>
 
-            <h3 className="text-xs font-semibold text-neutral-200 line-clamp-1 mb-1">
+            <h3
+              className={`text-[13px] font-medium line-clamp-1 leading-snug ${
+                isSelected ? 'text-white' : 'text-[#f5f5f7]'
+              }`}
+            >
               {item.subject}
             </h3>
 
-            {item.ai_summary ? (
-              <p className="text-[11px] text-neutral-400 line-clamp-2 leading-relaxed">
-                <span className="text-blue-400/90 font-medium">TL;DR: </span>
-                {item.ai_summary}
-              </p>
-            ) : (
-              <p className="text-[11px] text-neutral-500 line-clamp-2">
-                {item.snippet}
-              </p>
-            )}
-
-            <div className="flex items-center gap-2 mt-2">
-              <span className="text-[9px] px-1.5 py-0.5 rounded bg-white/5 text-neutral-400 border border-white/5 uppercase tracking-wide font-mono">
-                {item.category}
-              </span>
-              {item.due_date && (
-                <span className="text-[9px] text-amber-400/90 flex items-center gap-1 font-mono">
-                  <ClockIcon className="w-2.5 h-2.5" />
-                  Due: {item.due_date}
-                </span>
-              )}
-            </div>
+            <p
+              className={`text-[12px] line-clamp-2 mt-0.5 leading-normal ${
+                isSelected ? 'text-white/80' : 'text-[#86868b]'
+              }`}
+            >
+              {item.ai_summary || item.snippet}
+            </p>
           </div>
         );
       })}

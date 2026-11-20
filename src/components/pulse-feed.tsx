@@ -1,8 +1,4 @@
 import React from 'react';
-import {
-  GitPullRequest as GitPullRequestIcon,
-  Database as DatabaseIcon,
-} from '@phosphor-icons/react';
 import type { ProjectTelemetry } from '../types';
 
 interface PulseFeedProps {
@@ -17,15 +13,7 @@ export const PulseFeed: React.FC<PulseFeedProps> = ({
   onSelect,
 }) => {
   return (
-    <div className="flex-1 overflow-y-auto p-3 space-y-3">
-      <div className="text-[11px] font-medium text-neutral-400 flex items-center justify-between pb-1">
-        <span>Monitored Services & Deployments</span>
-        <span className="text-[10px] text-emerald-400 font-mono flex items-center gap-1">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-          Live Polling
-        </span>
-      </div>
-
+    <div className="flex-1 overflow-y-auto px-2 py-1.5 space-y-0.5">
       {projects.map((proj) => {
         const isSelected = proj.id === selectedId;
 
@@ -33,47 +21,51 @@ export const PulseFeed: React.FC<PulseFeedProps> = ({
           <div
             key={proj.id}
             onClick={() => onSelect(proj)}
-            className={`p-3 rounded-lg border transition-all cursor-pointer ${
+            className={`px-3 py-2.5 rounded-lg cursor-pointer transition-colors ${
               isSelected
-                ? 'bg-blue-600/10 border-blue-500/50'
-                : 'bg-[#151921] border-white/8 hover:border-white/15'
+                ? 'bg-[#0a84ff] text-white'
+                : 'hover:bg-white/[0.04] text-[#f5f5f7]'
             }`}
           >
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-semibold text-neutral-200">
+            <div className="flex items-center justify-between mb-0.5">
+              <span
+                className={`text-[13px] font-medium ${
+                  isSelected ? 'text-white' : 'text-[#f5f5f7]'
+                }`}
+              >
                 {proj.name}
               </span>
-              <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-                <span className="text-[10px] font-mono text-emerald-400 uppercase">
-                  {proj.last_status}
-                </span>
-              </div>
+              <span
+                className={`w-2 h-2 rounded-full ${
+                  proj.last_status === 'healthy'
+                    ? isSelected
+                      ? 'bg-white'
+                      : 'bg-[#30d158]'
+                    : isSelected
+                    ? 'bg-amber-200'
+                    : 'bg-[#ffd60a]'
+                }`}
+              />
             </div>
 
             {proj.repo_slug && (
-              <div className="text-[11px] font-mono text-neutral-400 mb-2 flex items-center gap-1">
-                <span>{proj.repo_slug}</span>
-              </div>
+              <p
+                className={`text-[12px] truncate ${
+                  isSelected ? 'text-white/80' : 'text-[#86868b]'
+                }`}
+              >
+                {proj.repo_slug}
+              </p>
             )}
 
-            <div className="grid grid-cols-2 gap-2 text-[11px] pt-2 border-t border-white/5 font-mono">
-              <div className="flex items-center gap-1.5 text-neutral-400">
-                <GitPullRequestIcon className="w-3.5 h-3.5 text-blue-400" />
-                <span>{proj.open_prs ?? 0} Open PRs</span>
-              </div>
-              <div className="flex items-center gap-1.5 text-neutral-400">
-                <DatabaseIcon className="w-3.5 h-3.5 text-purple-400" />
-                <span>{proj.db_storage_used_pct ?? 0}% Storage</span>
-              </div>
+            <div
+              className={`flex items-center justify-between text-[11px] mt-1.5 pt-1.5 border-t ${
+                isSelected ? 'border-white/20 text-white/80' : 'border-white/[0.06] text-[#86868b]'
+              }`}
+            >
+              <span>{proj.open_prs ?? 0} open pull requests</span>
+              <span>{proj.db_storage_used_pct ?? 0}% storage</span>
             </div>
-
-            {proj.metrics && (
-              <div className="mt-2 text-[10px] text-neutral-500 flex justify-between font-mono">
-                <span>Latency: {proj.metrics.latency_ms}ms</span>
-                <span>Error rate: {proj.metrics.error_rate * 100}%</span>
-              </div>
-            )}
           </div>
         );
       })}

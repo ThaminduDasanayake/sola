@@ -1,5 +1,4 @@
 import React from 'react';
-import { Globe as GlobeIcon } from '@phosphor-icons/react';
 import type { Bookmark } from '../types';
 
 interface VaultFeedProps {
@@ -15,67 +14,66 @@ export const VaultFeed: React.FC<VaultFeedProps> = ({
 }) => {
   if (bookmarks.length === 0) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-neutral-500">
-        <GlobeIcon className="w-8 h-8 stroke-[1.5] mb-2 text-neutral-600" />
-        <p className="text-xs">No bookmarks found matching your search query.</p>
-        <p className="text-[11px] text-neutral-600 mt-1">Press ⌘⇧S or click "Capture URL" to add a link.</p>
+      <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-[#86868b]">
+        <p className="text-[13px]">No bookmarks found</p>
       </div>
     );
   }
 
   return (
-    <div className="flex-1 overflow-y-auto divide-y divide-white/5">
+    <div className="flex-1 overflow-y-auto px-2 py-1.5 space-y-0.5">
       {bookmarks.map((item) => {
         const isSelected = item.id === selectedId;
-        const host = new URL(item.url.startsWith('http') ? item.url : `https://${item.url}`).hostname;
+        const host = new URL(
+          item.url.startsWith('http') ? item.url : `https://${item.url}`
+        ).hostname.replace('www.', '');
 
         return (
           <div
             key={item.id}
             onClick={() => onSelect(item)}
-            className={`p-3 cursor-pointer transition-colors ${
+            className={`px-3 py-2 rounded-lg cursor-pointer transition-colors ${
               isSelected
-                ? 'bg-blue-600/10 border-l-2 border-blue-500'
-                : 'hover:bg-white/[0.03] border-l-2 border-transparent'
+                ? 'bg-[#0a84ff] text-white'
+                : 'hover:bg-white/[0.04] text-[#f5f5f7]'
             }`}
           >
-            <div className="flex items-center justify-between gap-2 mb-1">
-              <span className="text-[11px] font-mono text-neutral-400 flex items-center gap-1 truncate">
-                <GlobeIcon className="w-3 h-3 text-neutral-500 shrink-0" />
+            <div className="flex items-center justify-between gap-2 mb-0.5">
+              <span
+                className={`text-[11px] font-medium truncate ${
+                  isSelected ? 'text-white/80' : 'text-[#86868b]'
+                }`}
+              >
                 {host}
               </span>
-              <span className="text-[10px] text-neutral-500 shrink-0">
-                {new Date(item.created_at).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+              <span
+                className={`text-[11px] shrink-0 font-normal ${
+                  isSelected ? 'text-white/70' : 'text-[#86868b]'
+                }`}
+              >
+                {new Date(item.created_at).toLocaleDateString([], {
+                  month: 'short',
+                  day: 'numeric',
+                })}
               </span>
             </div>
 
-            <h3 className="text-xs font-medium text-neutral-200 line-clamp-1 mb-1">
+            <h3
+              className={`text-[13px] font-medium line-clamp-1 leading-snug ${
+                isSelected ? 'text-white' : 'text-[#f5f5f7]'
+              }`}
+            >
               {item.title}
             </h3>
 
             {item.description && (
-              <p className="text-[11px] text-neutral-400 line-clamp-2 mb-2 leading-relaxed">
+              <p
+                className={`text-[12px] line-clamp-2 mt-0.5 leading-normal ${
+                  isSelected ? 'text-white/80' : 'text-[#86868b]'
+                }`}
+              >
                 {item.description}
               </p>
-            )}
-
-            {/* Tag Pills */}
-            {item.tags && item.tags.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-1">
-                {item.tags.slice(0, 3).map((tag) => (
-                  <span
-                    key={tag}
-                    className="text-[9px] bg-white/5 text-neutral-400 px-1.5 py-0.5 rounded border border-white/5 font-mono"
-                  >
-                    #{tag}
-                  </span>
-                ))}
-                {item.tags.length > 3 && (
-                  <span className="text-[9px] text-neutral-500 px-1 py-0.5">
-                    +{item.tags.length - 3}
-                  </span>
-                )}
-              </div>
             )}
           </div>
         );

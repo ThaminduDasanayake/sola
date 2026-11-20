@@ -4,7 +4,6 @@ import {
   SpeakerSimpleSlash as SpeakerSimpleSlashIcon,
   MagnifyingGlass as MagnifyingGlassIcon,
   Plus as PlusIcon,
-  Sparkle as SparkleIcon,
 } from '@phosphor-icons/react';
 import { ttsService, TTSState } from '../services/tts';
 import type { EmailThread } from '../types';
@@ -28,7 +27,7 @@ export const TopBar: React.FC<TopBarProps> = ({
     return ttsService.subscribe(setTtsState);
   }, []);
 
-  const handleReadDigest = () => {
+  const handleToggleDigest = () => {
     if (ttsState.isPlaying) {
       ttsService.stop();
       return;
@@ -36,80 +35,74 @@ export const TopBar: React.FC<TopBarProps> = ({
 
     const unread = emails.filter((e) => !e.is_read || e.category === 'Action' || e.category === 'Newsletter');
     if (unread.length === 0) {
-      ttsService.speak('Good morning! Your inbox and digests are completely caught up. Zero pending action items.');
+      ttsService.speak('Inbox is up to date.');
       return;
     }
 
     const digestText = [
-      `Good morning! Here is your Sola daily briefing. You have ${unread.length} priority updates.`,
-      ...unread.slice(0, 3).map((item, i) => `Item ${i + 1}: ${item.subject}. ${item.ai_summary || item.snippet}`),
-      'Briefing complete. Have a productive day.',
+      `You have ${unread.length} updates.`,
+      ...unread.slice(0, 3).map((item) => `${item.subject}. ${item.ai_summary || item.snippet}`),
     ].join('. ');
 
     ttsService.speak(digestText);
   };
 
   return (
-    <header className="titlebar-drag-region h-12 bg-[#0d0f12] border-b border-white/8 flex items-center justify-between px-4 select-none shrink-0">
-      {/* Left traffic-light spacer on macOS */}
-      <div className="flex items-center gap-3 pl-16 no-drag">
-        <span className="text-xs font-semibold tracking-wider text-neutral-400 uppercase">
-          Sola
-        </span>
-        <span className="text-[10px] bg-blue-500/10 text-blue-400 px-1.5 py-0.5 rounded border border-blue-500/20 font-mono">
-          macOS Native
-        </span>
-      </div>
+    <header className="titlebar-drag-region h-11 bg-[#18181a] border-b border-white/[0.06] flex items-center justify-between px-3 select-none shrink-0">
+      {/* Left traffic-light spacer */}
+      <div className="w-18 shrink-0" />
 
-      {/* Center Search Bar */}
-      <div className="flex-1 max-w-md mx-4 no-drag">
+      {/* Center Search Input (Apple style) */}
+      <div className="flex-1 max-w-sm mx-auto no-drag">
         <div className="relative flex items-center">
-          <MagnifyingGlassIcon className="w-3.5 h-3.5 absolute left-3 text-neutral-400 pointer-events-none" />
+          <MagnifyingGlassIcon className="w-3.5 h-3.5 absolute left-2.5 text-[#86868b] pointer-events-none" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Instant FTS5 search (bookmarks, emails, tags)..."
-            className="w-full bg-[#161a22] text-xs text-neutral-200 placeholder-neutral-500 pl-8 pr-12 py-1.5 rounded-md border border-white/10 focus:outline-none focus:border-blue-500/50 transition-colors"
+            placeholder="Search"
+            className="w-full bg-[#242426] text-[13px] text-[#f5f5f7] placeholder-[#86868b] pl-8 pr-8 py-1 rounded-md border border-white/[0.04] focus:outline-none focus:bg-[#2a2a2d] focus:ring-1 focus:ring-white/20 transition-all"
           />
-          <kbd className="absolute right-2.5 text-[10px] font-mono text-neutral-500 bg-white/5 px-1.5 py-0.5 rounded border border-white/10">
-            ⌘K
-          </kbd>
+          {searchQuery ? (
+            <button
+              onClick={() => onSearchChange('')}
+              className="absolute right-2 text-[11px] text-[#86868b] hover:text-white"
+            >
+              ×
+            </button>
+          ) : (
+            <kbd className="absolute right-2 text-[10px] text-[#636366] font-mono">
+              ⌘K
+            </kbd>
+          )}
         </div>
       </div>
 
-      {/* Right Action Buttons */}
-      <div className="flex items-center gap-2 no-drag">
-        {/* Morning Briefing Audio Button */}
+      {/* Right Toolbar Actions */}
+      <div className="flex items-center gap-1.5 no-drag">
         <button
-          onClick={handleReadDigest}
-          className={`flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-md border transition-all ${
+          onClick={handleToggleDigest}
+          className={`h-7 px-2 flex items-center gap-1.5 rounded-md text-[12px] font-medium transition-colors ${
             ttsState.isPlaying
-              ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 animate-pulse'
-              : 'bg-white/5 text-neutral-300 hover:text-white hover:bg-white/10 border-white/10'
+              ? 'bg-[#0a84ff] text-white'
+              : 'text-[#86868b] hover:text-[#f5f5f7] hover:bg-white/[0.06]'
           }`}
-          title="Play hands-free morning audio briefing using macOS native speech synthesis"
+          title={ttsState.isPlaying ? 'Stop audio' : 'Listen to briefing'}
         >
           {ttsState.isPlaying ? (
-            <>
-              <SpeakerSimpleSlashIcon className="w-3.5 h-3.5 text-amber-400" />
-              <span>Stop Briefing</span>
-            </>
+            <SpeakerSimpleSlashIcon className="w-3.5 h-3.5" />
           ) : (
-            <>
-              <SpeakerHighIcon className="w-3.5 h-3.5 text-blue-400" />
-              <span>Read Digest</span>
-            </>
+            <SpeakerHighIcon className="w-3.5 h-3.5" />
           )}
+          <span>{ttsState.isPlaying ? 'Stop' : 'Briefing'}</span>
         </button>
 
-        {/* Quick Add Link */}
         <button
           onClick={onOpenQuickAdd}
-          className="flex items-center gap-1 px-2.5 py-1 text-xs bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-md shadow-sm transition-colors"
+          className="h-7 w-7 flex items-center justify-center rounded-md text-[#86868b] hover:text-[#f5f5f7] hover:bg-white/[0.06] transition-colors"
+          title="New bookmark (⌘⇧S)"
         >
-          <PlusIcon className="w-3.5 h-3.5" />
-          <span>Capture URL</span>
+          <PlusIcon className="w-4 h-4" />
         </button>
       </div>
     </header>

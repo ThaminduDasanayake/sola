@@ -75,8 +75,8 @@ export function App() {
   const unreadCount = emails.filter((e) => !e.is_read).length;
 
   return (
-    <div className="flex flex-col h-screen w-screen overflow-hidden bg-[#18181a] text-[#f5f5f7]">
-      {/* Apple-Style Minimal Toolbar */}
+    <div className="flex flex-col h-screen w-screen overflow-hidden bg-[#17171a] text-[#f7f7f8]">
+      {/* Sola Solar Top Bar */}
       <TopBar
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
@@ -84,7 +84,7 @@ export function App() {
         emails={emails}
       />
 
-      {/* Main 3-Pane Layout */}
+      {/* Main 3-Pane Workspace */}
       <div className="flex flex-1 overflow-hidden">
         {/* Pane 1: Sidebar */}
         <Sidebar
@@ -96,12 +96,12 @@ export function App() {
         />
 
         {/* Pane 2: List Feed */}
-        <div className="w-72 border-r border-white/[0.06] bg-[#1c1c1e] flex flex-col shrink-0">
+        <div className="w-72 border-r border-white/[0.06] bg-[#1c1c20] flex flex-col shrink-0">
           <div className="h-10 border-b border-white/[0.06] flex items-center justify-between px-4 shrink-0">
             <span className="text-[12px] font-semibold text-[#86868b] uppercase tracking-wider">
               {activeTab === 'vault' ? 'Bookmarks' : activeTab === 'inbox' ? 'Inbox' : 'Pulse'}
             </span>
-            <span className="text-[11px] text-[#636366] font-mono">
+            <span className="text-[11px] text-[#6b6b75] font-mono">
               {activeTab === 'vault'
                 ? bookmarks.length
                 : activeTab === 'inbox'
@@ -136,7 +136,7 @@ export function App() {
         </div>
 
         {/* Pane 3: Detail View */}
-        <div className="flex-1 bg-[#161618] flex flex-col overflow-hidden">
+        <div className="flex-1 bg-[#141417] flex flex-col overflow-hidden">
           {activeTab === 'vault' && (
             <DetailPane item={selectedBookmark} type="bookmark" />
           )}

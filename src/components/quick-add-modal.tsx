@@ -60,9 +60,9 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-[#242426] border border-white/10 rounded-xl w-full max-w-sm shadow-2xl overflow-hidden p-5 space-y-4">
-        <h3 className="text-[14px] font-semibold text-[#f5f5f7]">
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="bg-[#212125] border border-white/10 rounded-xl w-full max-w-sm shadow-2xl overflow-hidden p-5 space-y-4">
+        <h3 className="text-[14px] font-semibold text-[#f7f7f8]">
           Add Bookmark
         </h3>
 
@@ -78,7 +78,7 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
               onChange={(e) => setUrl(e.target.value)}
               onBlur={handleUrlBlur}
               placeholder="https://"
-              className="w-full bg-[#1c1c1e] border border-white/10 rounded-md px-2.5 py-1.5 text-[13px] text-[#f5f5f7] focus:outline-none focus:ring-1 focus:ring-[#0a84ff]"
+              className="w-full bg-[#18181b] border border-white/10 rounded-md px-2.5 py-1.5 text-[13px] text-[#f7f7f8] focus:outline-none focus:ring-1 focus:ring-amber-500/60"
               required
             />
           </div>
@@ -92,7 +92,7 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Title"
-              className="w-full bg-[#1c1c1e] border border-white/10 rounded-md px-2.5 py-1.5 text-[13px] text-[#f5f5f7] focus:outline-none focus:ring-1 focus:ring-[#0a84ff]"
+              className="w-full bg-[#18181b] border border-white/10 rounded-md px-2.5 py-1.5 text-[13px] text-[#f7f7f8] focus:outline-none focus:ring-1 focus:ring-amber-500/60"
             />
           </div>
 
@@ -105,7 +105,7 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
               value={tagsInput}
               onChange={(e) => setTagsInput(e.target.value)}
               placeholder="Separated by comma"
-              className="w-full bg-[#1c1c1e] border border-white/10 rounded-md px-2.5 py-1.5 text-[13px] text-[#f5f5f7] focus:outline-none focus:ring-1 focus:ring-[#0a84ff]"
+              className="w-full bg-[#18181b] border border-white/10 rounded-md px-2.5 py-1.5 text-[13px] text-[#f7f7f8] focus:outline-none focus:ring-1 focus:ring-amber-500/60"
             />
           </div>
 
@@ -118,7 +118,7 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Optional notes"
-              className="w-full bg-[#1c1c1e] border border-white/10 rounded-md px-2.5 py-1.5 text-[13px] text-[#f5f5f7] focus:outline-none focus:ring-1 focus:ring-[#0a84ff] resize-none"
+              className="w-full bg-[#18181b] border border-white/10 rounded-md px-2.5 py-1.5 text-[13px] text-[#f7f7f8] focus:outline-none focus:ring-1 focus:ring-amber-500/60 resize-none"
             />
           </div>
 
@@ -126,13 +126,13 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-3 py-1 text-[12px] text-[#86868b] hover:text-[#f5f5f7] transition-colors"
+              className="px-3 py-1 text-[12px] text-[#86868b] hover:text-[#f7f7f8] transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-3 py-1 text-[12px] bg-[#0a84ff] hover:bg-[#0077ed] text-white font-medium rounded-md transition-colors"
+              className="px-3 py-1 text-[12px] bg-[#f59e0b] hover:bg-[#d97706] text-[#121214] font-semibold rounded-md transition-colors"
             >
               Add
             </button>

@@ -1,5 +1,8 @@
 import React from 'react';
-import { Activity, GitPullRequest, Database, CheckCircle2, AlertTriangle, ArrowUpRight } from 'lucide-react';
+import {
+  GitPullRequest as GitPullRequestIcon,
+  Database as DatabaseIcon,
+} from '@phosphor-icons/react';
 import type { ProjectTelemetry } from '../types';
 
 interface PulseFeedProps {
@@ -56,11 +59,11 @@ export const PulseFeed: React.FC<PulseFeedProps> = ({
 
             <div className="grid grid-cols-2 gap-2 text-[11px] pt-2 border-t border-white/5 font-mono">
               <div className="flex items-center gap-1.5 text-neutral-400">
-                <GitPullRequest className="w-3.5 h-3.5 text-blue-400" />
+                <GitPullRequestIcon className="w-3.5 h-3.5 text-blue-400" />
                 <span>{proj.open_prs ?? 0} Open PRs</span>
               </div>
               <div className="flex items-center gap-1.5 text-neutral-400">
-                <Database className="w-3.5 h-3.5 text-purple-400" />
+                <DatabaseIcon className="w-3.5 h-3.5 text-purple-400" />
                 <span>{proj.db_storage_used_pct ?? 0}% Storage</span>
               </div>
             </div>

@@ -1,5 +1,13 @@
 import React from 'react';
-import { Mail, Clock, AlertCircle, Newspaper, Terminal, Receipt, CheckCircle2 } from 'lucide-react';
+import {
+  Envelope as EnvelopeIcon,
+  WarningCircle as WarningCircleIcon,
+  Newspaper as NewspaperIcon,
+  TerminalWindow as TerminalWindowIcon,
+  Receipt as ReceiptIcon,
+  CheckCircle as CheckCircleIcon,
+  Clock as ClockIcon,
+} from '@phosphor-icons/react';
 import type { EmailThread } from '../types';
 
 interface InboxFeedProps {
@@ -11,15 +19,15 @@ interface InboxFeedProps {
 const CategoryIcon: React.FC<{ category: EmailThread['category'] }> = ({ category }) => {
   switch (category) {
     case 'Action':
-      return <AlertCircle className="w-3.5 h-3.5 text-amber-400 shrink-0" />;
+      return <WarningCircleIcon className="w-3.5 h-3.5 text-amber-400 shrink-0" />;
     case 'Newsletter':
-      return <Newspaper className="w-3.5 h-3.5 text-purple-400 shrink-0" />;
+      return <NewspaperIcon className="w-3.5 h-3.5 text-purple-400 shrink-0" />;
     case 'Dev':
-      return <Terminal className="w-3.5 h-3.5 text-blue-400 shrink-0" />;
+      return <TerminalWindowIcon className="w-3.5 h-3.5 text-blue-400 shrink-0" />;
     case 'Receipt':
-      return <Receipt className="w-3.5 h-3.5 text-emerald-400 shrink-0" />;
+      return <ReceiptIcon className="w-3.5 h-3.5 text-emerald-400 shrink-0" />;
     default:
-      return <Mail className="w-3.5 h-3.5 text-neutral-400 shrink-0" />;
+      return <EnvelopeIcon className="w-3.5 h-3.5 text-neutral-400 shrink-0" />;
   }
 };
 
@@ -31,7 +39,7 @@ export const InboxFeed: React.FC<InboxFeedProps> = ({
   if (emails.length === 0) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-neutral-500">
-        <CheckCircle2 className="w-8 h-8 stroke-[1.5] mb-2 text-emerald-500/80" />
+        <CheckCircleIcon className="w-8 h-8 stroke-[1.5] mb-2 text-emerald-500/80" />
         <p className="text-xs">Inbox zero! All threads and newsletters are triaged.</p>
       </div>
     );
@@ -90,7 +98,7 @@ export const InboxFeed: React.FC<InboxFeedProps> = ({
               </span>
               {item.due_date && (
                 <span className="text-[9px] text-amber-400/90 flex items-center gap-1 font-mono">
-                  <Clock className="w-2.5 h-2.5" />
+                  <ClockIcon className="w-2.5 h-2.5" />
                   Due: {item.due_date}
                 </span>
               )}

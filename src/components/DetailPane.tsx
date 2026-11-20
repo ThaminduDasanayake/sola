@@ -1,5 +1,11 @@
 import React from 'react';
-import { ExternalLink, Volume2, VolumeX, Copy, Check, Clock, Calendar, Sparkles, Tag } from 'lucide-react';
+import {
+  ArrowSquareOut as ArrowSquareOutIcon,
+  SpeakerHigh as SpeakerHighIcon,
+  Copy as CopyIcon,
+  Check as CheckIcon,
+  Sparkle as SparkleIcon,
+} from '@phosphor-icons/react';
 import { ttsService } from '../services/tts';
 import type { Bookmark, EmailThread, ProjectTelemetry } from '../types';
 
@@ -14,7 +20,7 @@ export const DetailPane: React.FC<DetailPaneProps> = ({ item, type }) => {
   if (!item || !type) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-neutral-500">
-        <Sparkles className="w-8 h-8 stroke-[1.5] mb-2 text-neutral-600" />
+        <SparkleIcon className="w-8 h-8 stroke-[1.5] mb-2 text-neutral-600" />
         <p className="text-xs">Select an item from the feed to inspect details</p>
       </div>
     );
@@ -54,14 +60,14 @@ export const DetailPane: React.FC<DetailPaneProps> = ({ item, type }) => {
               className="p-1.5 rounded-md hover:bg-white/10 text-neutral-400 hover:text-white transition-colors"
               title="Copy URL"
             >
-              {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+              {copied ? <CheckIcon className="w-4 h-4 text-emerald-400" /> : <CopyIcon className="w-4 h-4" />}
             </button>
             <button
               onClick={() => handleOpenBrowser(bookmark.url)}
               className="p-1.5 rounded-md hover:bg-white/10 text-neutral-400 hover:text-white transition-colors"
               title="Open in Browser"
             >
-              <ExternalLink className="w-4 h-4" />
+              <ArrowSquareOutIcon className="w-4 h-4" />
             </button>
           </div>
         </div>
@@ -85,14 +91,14 @@ export const DetailPane: React.FC<DetailPaneProps> = ({ item, type }) => {
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <h4 className="text-[11px] font-semibold text-blue-400 flex items-center gap-1.5 uppercase tracking-wider">
-                <Sparkles className="w-3.5 h-3.5" />
+                <SparkleIcon className="w-3.5 h-3.5" />
                 <span>AI Auto-Enrichment Notes</span>
               </h4>
               <button
                 onClick={() => ttsService.speak(bookmark.ai_notes || '')}
                 className="flex items-center gap-1 text-[10px] text-neutral-400 hover:text-white"
               >
-                <Volume2 className="w-3 h-3 text-blue-400" />
+                <SpeakerHighIcon className="w-3 h-3 text-blue-400" />
                 <span>Read Notes</span>
               </button>
             </div>
@@ -146,7 +152,7 @@ export const DetailPane: React.FC<DetailPaneProps> = ({ item, type }) => {
             onClick={() => ttsService.speak(`Subject: ${email.subject}. Summary: ${email.ai_summary || email.snippet}`)}
             className="flex items-center gap-1.5 px-2.5 py-1 text-xs bg-blue-600/20 text-blue-300 hover:bg-blue-600/30 border border-blue-500/30 rounded-md shrink-0 transition-colors"
           >
-            <Volume2 className="w-3.5 h-3.5 text-blue-400" />
+            <SpeakerHighIcon className="w-3.5 h-3.5 text-blue-400" />
             <span>Read Audio</span>
           </button>
         </div>
@@ -154,7 +160,7 @@ export const DetailPane: React.FC<DetailPaneProps> = ({ item, type }) => {
         {email.ai_summary && (
           <div className="bg-blue-950/20 border border-blue-500/20 p-3.5 rounded-lg space-y-2">
             <div className="flex items-center gap-1.5 text-xs font-semibold text-blue-400">
-              <Sparkles className="w-3.5 h-3.5" />
+              <SparkleIcon className="w-3.5 h-3.5" />
               <span>Structured Gemini Summary</span>
             </div>
             <p className="text-xs text-neutral-200 leading-relaxed">{email.ai_summary}</p>

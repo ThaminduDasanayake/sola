@@ -1,5 +1,5 @@
 import React from 'react';
-import { ExternalLink, Tag, Sparkles, Clock, Globe } from 'lucide-react';
+import { Globe as GlobeIcon } from '@phosphor-icons/react';
 import type { Bookmark } from '../types';
 
 interface VaultFeedProps {
@@ -16,7 +16,7 @@ export const VaultFeed: React.FC<VaultFeedProps> = ({
   if (bookmarks.length === 0) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-neutral-500">
-        <Globe className="w-8 h-8 stroke-[1.5] mb-2 text-neutral-600" />
+        <GlobeIcon className="w-8 h-8 stroke-[1.5] mb-2 text-neutral-600" />
         <p className="text-xs">No bookmarks found matching your search query.</p>
         <p className="text-[11px] text-neutral-600 mt-1">Press ⌘⇧S or click "Capture URL" to add a link.</p>
       </div>
@@ -41,7 +41,7 @@ export const VaultFeed: React.FC<VaultFeedProps> = ({
           >
             <div className="flex items-center justify-between gap-2 mb-1">
               <span className="text-[11px] font-mono text-neutral-400 flex items-center gap-1 truncate">
-                <Globe className="w-3 h-3 text-neutral-500 shrink-0" />
+                <GlobeIcon className="w-3 h-3 text-neutral-500 shrink-0" />
                 {host}
               </span>
               <span className="text-[10px] text-neutral-500 shrink-0">

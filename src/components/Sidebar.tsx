@@ -1,5 +1,10 @@
 import React from 'react';
-import { Bookmark, Mail, Activity, Sparkles, FolderGit2, HardDrive, Cpu, Compass } from 'lucide-react';
+import {
+  BookmarkSimple as BookmarkSimpleIcon,
+  Envelope as EnvelopeIcon,
+  Pulse as PulseIcon,
+  HardDrive as HardDriveIcon,
+} from '@phosphor-icons/react';
 import type { ActiveTab } from '../types';
 
 interface SidebarProps {
@@ -35,7 +40,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               }`}
             >
               <div className="flex items-center gap-2">
-                <Bookmark className="w-3.5 h-3.5" />
+                <BookmarkSimpleIcon className="w-3.5 h-3.5" />
                 <span>Link & Repo Vault</span>
               </div>
               <span className="text-[10px] px-1.5 py-0.2 bg-white/5 rounded-full text-neutral-400 font-mono">
@@ -52,7 +57,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               }`}
             >
               <div className="flex items-center gap-2">
-                <Mail className="w-3.5 h-3.5" />
+                <EnvelopeIcon className="w-3.5 h-3.5" />
                 <span>Smart Inbox</span>
               </div>
               {unreadEmailCount > 0 && (
@@ -71,7 +76,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               }`}
             >
               <div className="flex items-center gap-2">
-                <Activity className="w-3.5 h-3.5" />
+                <PulseIcon className="w-3.5 h-3.5" />
                 <span>Dev & Ops Pulse</span>
               </div>
               <span className="w-2 h-2 rounded-full bg-emerald-400/80 shadow-[0_0_8px_rgba(52,211,153,0.5)]"></span>
@@ -104,7 +109,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Footer System Telemetry Badge */}
       <div className="p-3 border-t border-white/8 bg-[#0e1014]">
         <div className="flex items-center gap-2 text-[11px] text-neutral-400 mb-1">
-          <HardDrive className="w-3.5 h-3.5 text-emerald-400" />
+          <HardDriveIcon className="w-3.5 h-3.5 text-emerald-400" />
           <span className="font-medium text-neutral-300">Local-First Engine</span>
         </div>
         <div className="text-[10px] text-neutral-500 flex justify-between font-mono">

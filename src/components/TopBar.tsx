@@ -1,5 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { Volume2, VolumeX, Search, Plus, Sparkles, Cpu } from 'lucide-react';
+import {
+  SpeakerHigh as SpeakerHighIcon,
+  SpeakerSimpleSlash as SpeakerSimpleSlashIcon,
+  MagnifyingGlass as MagnifyingGlassIcon,
+  Plus as PlusIcon,
+  Sparkle as SparkleIcon,
+} from '@phosphor-icons/react';
 import { ttsService, TTSState } from '../services/tts';
 import type { EmailThread } from '../types';
 
@@ -58,7 +64,7 @@ export const TopBar: React.FC<TopBarProps> = ({
       {/* Center Search Bar */}
       <div className="flex-1 max-w-md mx-4 no-drag">
         <div className="relative flex items-center">
-          <Search className="w-3.5 h-3.5 absolute left-3 text-neutral-400 pointer-events-none" />
+          <MagnifyingGlassIcon className="w-3.5 h-3.5 absolute left-3 text-neutral-400 pointer-events-none" />
           <input
             type="text"
             value={searchQuery}
@@ -86,12 +92,12 @@ export const TopBar: React.FC<TopBarProps> = ({
         >
           {ttsState.isPlaying ? (
             <>
-              <VolumeX className="w-3.5 h-3.5 text-amber-400" />
+              <SpeakerSimpleSlashIcon className="w-3.5 h-3.5 text-amber-400" />
               <span>Stop Briefing</span>
             </>
           ) : (
             <>
-              <Volume2 className="w-3.5 h-3.5 text-blue-400" />
+              <SpeakerHighIcon className="w-3.5 h-3.5 text-blue-400" />
               <span>Read Digest</span>
             </>
           )}
@@ -102,7 +108,7 @@ export const TopBar: React.FC<TopBarProps> = ({
           onClick={onOpenQuickAdd}
           className="flex items-center gap-1 px-2.5 py-1 text-xs bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-md shadow-sm transition-colors"
         >
-          <Plus className="w-3.5 h-3.5" />
+          <PlusIcon className="w-3.5 h-3.5" />
           <span>Capture URL</span>
         </button>
       </div>

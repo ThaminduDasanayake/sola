@@ -14,14 +14,15 @@ export const VaultFeed: React.FC<VaultFeedProps> = ({
 }) => {
   if (bookmarks.length === 0) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-[#86868b]">
-        <p className="text-[13px]">No bookmarks found</p>
+      <div className="flex-1 flex flex-col items-center justify-center p-8 text-center select-none">
+        <p className="text-[14px] font-medium text-[#d1d1d6]">No Bookmarks</p>
+        <p className="text-[12px] text-[#636366] mt-1">Press ⌘B or click + to add a bookmark</p>
       </div>
     );
   }
 
   return (
-    <div className="flex-1 overflow-y-auto px-2 py-1.5 space-y-1">
+    <div className="flex-1 overflow-y-auto p-1.5 space-y-0.5">
       {bookmarks.map((item) => {
         const isSelected = item.id === selectedId;
         const host = new URL(
@@ -32,25 +33,17 @@ export const VaultFeed: React.FC<VaultFeedProps> = ({
           <div
             key={item.id}
             onClick={() => onSelect(item)}
-            className={`px-3 py-2.5 rounded-lg cursor-pointer transition-all ${
+            className={`px-3 py-2.5 rounded-xl cursor-pointer transition-colors ${
               isSelected
-                ? 'bg-[#2a2417] border border-amber-500/35 shadow-sm'
-                : 'hover:bg-white/[0.04] border border-transparent'
+                ? 'bg-white/[0.12] text-[#f5f5f7]'
+                : 'hover:bg-white/[0.05] text-[#d1d1d6]'
             }`}
           >
-            <div className="flex items-center justify-between gap-2 mb-1">
-              <span
-                className={`text-[11px] font-medium truncate ${
-                  isSelected ? 'text-amber-400' : 'text-[#86868b]'
-                }`}
-              >
+            <div className="flex items-center justify-between gap-2 mb-0.5">
+              <span className="text-[11px] font-medium truncate text-[#e5a93c]">
                 {host}
               </span>
-              <span
-                className={`text-[11px] shrink-0 font-normal ${
-                  isSelected ? 'text-amber-300/80' : 'text-[#86868b]'
-                }`}
-              >
+              <span className="text-[11px] shrink-0 text-[#8e8e93]">
                 {new Date(item.created_at).toLocaleDateString([], {
                   month: 'short',
                   day: 'numeric',
@@ -58,20 +51,12 @@ export const VaultFeed: React.FC<VaultFeedProps> = ({
               </span>
             </div>
 
-            <h3
-              className={`text-[13px] font-medium line-clamp-1 leading-snug ${
-                isSelected ? 'text-[#fbfbfb] font-semibold' : 'text-[#f0f0f3]'
-              }`}
-            >
+            <h3 className="text-[13px] font-medium line-clamp-1 leading-snug text-[#f5f5f7]">
               {item.title}
             </h3>
 
             {item.description && (
-              <p
-                className={`text-[12px] line-clamp-2 mt-1 leading-normal ${
-                  isSelected ? 'text-[#d6d6dc]' : 'text-[#9e9ea7]'
-                }`}
-              >
+              <p className="text-[12px] line-clamp-2 mt-0.5 leading-normal text-[#8e8e93]">
                 {item.description}
               </p>
             )}

@@ -8,6 +8,8 @@ export interface Bookmark {
   created_at: string;
 }
 
+export type EmailCategoryTab = 'Primary' | 'Updates' | 'All';
+
 export interface EmailThread {
   id: string;
   thread_id: string;
@@ -15,9 +17,10 @@ export interface EmailThread {
   subject: string;
   snippet: string;
   ai_summary?: string;
-  category: 'Action' | 'Newsletter' | 'Dev' | 'Receipt' | 'Uncategorized';
+  category: 'Primary' | 'Updates' | 'Promotions' | 'Social' | string;
   is_read: boolean;
   received_at: string;
+  account_email?: string;
   action_items?: string[];
   due_date?: string;
 }
@@ -37,4 +40,4 @@ export interface ProjectTelemetry {
   };
 }
 
-export type ActiveTab = 'vault' | 'inbox' | 'pulse';
+export type ActiveTab = 'inbox' | 'vault' | 'pulse' | 'settings';

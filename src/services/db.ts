@@ -1,102 +1,13 @@
 import Database from '@tauri-apps/plugin-sql';
+import { invoke } from '@tauri-apps/api/core';
 import type { Bookmark, EmailThread, ProjectTelemetry } from '../types';
 
 let dbInstance: Database | null = null;
 
-// Initial starter mock data
-const INITIAL_BOOKMARKS: Bookmark[] = [
-  {
-    id: 1,
-    url: 'https://github.com/tauri-apps/tauri',
-    title: 'tauri-apps/tauri: Build smaller, faster, and more secure desktop applications',
-    description: 'Tauri is a framework to build desktop and mobile applications with web frontends and Rust backends.',
-    tags: ['rust', 'desktop', 'tauri', 'native'],
-    ai_notes: 'Key architecture reference for WKWebView memory optimization and native IPC protocol.',
-    created_at: new Date(Date.now() - 3600000 * 2).toISOString(),
-  },
-  {
-    id: 2,
-    url: 'https://sqlite.org/fts5.html',
-    title: 'SQLite FTS5 Extension Documentation',
-    description: 'SQLite full-text search engine module providing sub-millisecond keyword retrieval.',
-    tags: ['sqlite', 'database', 'fts5', 'performance'],
-    ai_notes: 'FTS5 virtual table implementation notes: BM25 ranking algorithm and prefix queries.',
-    created_at: new Date(Date.now() - 3600000 * 5).toISOString(),
-  },
-  {
-    id: 3,
-    url: 'https://linear.app/method',
-    title: 'The Linear Method: Practices for High-Performance Product Teams',
-    description: 'Principles for modern, keyboard-first desktop interface design and snappy interactions.',
-    tags: ['design', 'ux', 'macOS', 'keyboard-first'],
-    ai_notes: 'Inspiration for Sola 3-pane layout, subtle borders, and low-latency interaction loops.',
-    created_at: new Date(Date.now() - 3600000 * 18).toISOString(),
-  },
-];
-
-const INITIAL_EMAILS: EmailThread[] = [
-  {
-    id: 'em-1',
-    thread_id: 'th-101',
-    sender: 'GitHub Notifications <notifications@github.com>',
-    subject: '[sola-core] PR #14 Merged: Upgrade WKWebView titleBarStyle overlay',
-    snippet: 'All checks passed. 3 reviewers approved. Merged by main maintainer into release-v0.1.',
-    ai_summary: 'PR #14 was approved and merged cleanly. Adds overlay title bar support for frameless windowing.',
-    category: 'Dev',
-    is_read: false,
-    received_at: new Date(Date.now() - 1000 * 60 * 25).toISOString(),
-    action_items: ['Tag release-v0.1.1 on GitHub', 'Update changelog with WKWebView changes'],
-    due_date: 'Today, 6:00 PM',
-  },
-  {
-    id: 'em-2',
-    thread_id: 'th-102',
-    sender: 'Pragmatic Engineer <newsletter@pragmaticengineer.com>',
-    subject: 'Issue #184: The Renaissance of Local-First Software Architectures',
-    snippet: 'Why top engineering teams are ditching heavy cloud dependencies in favor of client-side SQLite and CRDTs.',
-    ai_summary: 'Deep dive into local-first architecture trends: 90% cloud cost reduction, offline resilience, and instant sub-10ms UI latency.',
-    category: 'Newsletter',
-    is_read: false,
-    received_at: new Date(Date.now() - 3600000 * 3).toISOString(),
-    action_items: ['Review SQLite FTS5 synchronization patterns', 'Share with engineering team'],
-  },
-  {
-    id: 'em-3',
-    thread_id: 'th-103',
-    sender: 'Stripe Billing <invoices@stripe.com>',
-    subject: 'Invoice for Anthropic Claude & OpenAI API Usage - October',
-    snippet: 'Your monthly invoice of $42.50 has been successfully paid via card ending in 4242.',
-    ai_summary: 'Monthly AI inference API charges processed. Total: $42.50. No action required.',
-    category: 'Receipt',
-    is_read: true,
-    received_at: new Date(Date.now() - 3600000 * 24).toISOString(),
-  },
-];
-
-const INITIAL_PROJECTS: ProjectTelemetry[] = [
-  {
-    id: 1,
-    name: 'Sola Command Center',
-    repo_slug: 'developer/sola-desktop',
-    vercel_project_id: 'prj_sola_core',
-    last_status: 'healthy',
-    last_checked_at: new Date(Date.now() - 1000 * 60 * 3).toISOString(),
-    open_prs: 2,
-    db_storage_used_pct: 12,
-    metrics: { latency_ms: 18, error_rate: 0.01 },
-  },
-  {
-    id: 2,
-    name: 'Neon Database Serverless',
-    repo_slug: 'developer/api-service',
-    vercel_project_id: 'prj_api_service',
-    last_status: 'healthy',
-    last_checked_at: new Date(Date.now() - 1000 * 60 * 8).toISOString(),
-    open_prs: 0,
-    db_storage_used_pct: 38,
-    metrics: { latency_ms: 42, error_rate: 0.0 },
-  },
-];
+// In-memory data collections (starts completely empty, populated via sync/user input)
+const INITIAL_BOOKMARKS: Bookmark[] = [];
+const INITIAL_EMAILS: EmailThread[] = [];
+const INITIAL_PROJECTS: ProjectTelemetry[] = [];
 
 export async function getDb(): Promise<Database | null> {
   if (dbInstance) return dbInstance;
@@ -111,9 +22,9 @@ export async function getDb(): Promise<Database | null> {
 }
 
 // In-memory cache for fast UI updates
-let memoryBookmarks = [...INITIAL_BOOKMARKS];
-let memoryEmails = [...INITIAL_EMAILS];
-let memoryProjects = [...INITIAL_PROJECTS];
+let memoryBookmarks: Bookmark[] = [];
+let memoryEmails: EmailThread[] = [];
+let memoryProjects: ProjectTelemetry[] = [];
 
 export async function fetchBookmarks(searchQuery = ''): Promise<Bookmark[]> {
   const db = await getDb();
@@ -192,7 +103,11 @@ export async function fetchEmails(): Promise<EmailThread[]> {
   const db = await getDb();
   if (db) {
     try {
-      const rows = await db.select<any[]>('SELECT * FROM emails ORDER BY received_at DESC');
+      const rows = await db.select<any[]>(
+        `SELECT * FROM emails 
+         WHERE category IN ('Primary', 'Updates', 'Action', 'Dev', 'Receipt') 
+         ORDER BY received_at DESC`
+      );
       if (rows.length > 0) {
         return rows.map((r) => ({
           ...r,
@@ -217,4 +132,130 @@ export async function fetchProjects(): Promise<ProjectTelemetry[]> {
     }
   }
   return memoryProjects;
+}
+
+export async function fetchDeletedEmailIds(): Promise<string[]> {
+  const db = await getDb();
+  if (db) {
+    try {
+      await db.execute(
+        `CREATE TABLE IF NOT EXISTS deleted_emails (
+          id TEXT PRIMARY KEY,
+          deleted_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );`
+      );
+      const rows = await db.select<{ id: string }[]>('SELECT id FROM deleted_emails');
+      return rows.map((r) => r.id);
+    } catch (e) {
+      console.warn('Failed to fetch deleted email ids:', e);
+    }
+  }
+  return [];
+}
+
+export async function deleteEmail(id: string): Promise<void> {
+  await deleteEmails([id]);
+}
+
+export async function deleteEmails(ids: string[]): Promise<void> {
+  if (ids.length === 0) return;
+  const idSet = new Set(ids);
+  memoryEmails = memoryEmails.filter((e) => !idSet.has(e.id));
+  const db = await getDb();
+  if (db) {
+    try {
+      const placeholders = ids.map(() => '?').join(',');
+      await db.execute(`DELETE FROM emails WHERE id IN (${placeholders})`, ids);
+      const now = new Date().toISOString();
+      for (const id of ids) {
+        await db.execute(
+          'INSERT OR REPLACE INTO deleted_emails (id, deleted_at) VALUES (?, ?)',
+          [id, now]
+        );
+      }
+    } catch (e) {
+      console.warn('Failed to delete emails from SQLite:', e);
+    }
+  }
+}
+
+export async function getDatabasePath(): Promise<string> {
+  try {
+    return await invoke<string>('get_database_path');
+  } catch {
+    return 'sola.db (project root)';
+  }
+}
+
+export async function revealDatabaseInFinder(): Promise<void> {
+  try {
+    await invoke('reveal_database');
+  } catch (e) {
+    console.warn('Failed to reveal database:', e);
+  }
+}
+
+export async function syncGmail(limit?: number): Promise<EmailThread[]> {
+  try {
+    const savedLimit = typeof window !== 'undefined' ? parseInt(localStorage.getItem('sola_email_limit') || '40', 10) : 40;
+    const fetchLimit = limit ?? savedLimit;
+    const deletedIds = await fetchDeletedEmailIds();
+    const fetched = await invoke<any[]>('sync_gmail_emails', {
+      limit: fetchLimit,
+      deletedIds: deletedIds,
+    });
+    if (fetched && fetched.length > 0) {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('sola_last_sync_time', Date.now().toString());
+      }
+      // Normalize dates to ISO-8601 for accurate SQLite sorting
+      fetched.forEach((item) => {
+        if (!isNaN(Date.parse(item.received_at))) {
+          item.received_at = new Date(item.received_at).toISOString();
+        }
+      });
+      // Sort newest first
+      fetched.sort((a, b) => new Date(b.received_at).getTime() - new Date(a.received_at).getTime());
+      memoryEmails = fetched;
+      const db = await getDb();
+      if (db) {
+        // Clean out any legacy or promotional/social/forum emails
+        try {
+          await db.execute(
+            `DELETE FROM emails WHERE category NOT IN ('Primary', 'Updates', 'Action', 'Dev', 'Receipt')`
+          );
+        } catch (e) {
+          console.warn('Could not prune non-primary categories:', e);
+        }
+
+        for (const item of fetched) {
+          try {
+            await db.execute(
+              `INSERT OR REPLACE INTO emails (id, thread_id, sender, subject, snippet, ai_summary, category, is_read, received_at, account_email)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              [
+                item.id,
+                item.thread_id,
+                item.sender,
+                item.subject,
+                item.snippet,
+                item.ai_summary || '',
+                item.category,
+                item.is_read ? 1 : 0,
+                item.received_at,
+                item.account_email,
+              ]
+            );
+          } catch (e) {
+            console.warn('Error saving synced email to sqlite:', e);
+          }
+        }
+      }
+      return fetched;
+    }
+  } catch (err) {
+    console.warn('Gmail sync error:', err);
+    throw err;
+  }
+  return fetchEmails();
 }

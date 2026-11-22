@@ -76,7 +76,7 @@ class TTSService {
     }
   }
 
-  speak(text: string) {
+  speak(text: string, options?: { voiceName?: string; rate?: number }) {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
       console.warn('Speech synthesis not supported in this environment');
       return;
@@ -87,10 +87,11 @@ class TTSService {
     const utterance = new SpeechSynthesisUtterance(text);
     const available = this.getVoices();
 
-    // 1. Check user-configured voice preference
+    // 1. Check specified override or user-configured voice preference
+    const targetVoiceName = options?.voiceName || this.selectedVoiceName;
     let voice: SpeechSynthesisVoice | undefined;
-    if (this.selectedVoiceName) {
-      voice = available.find((v) => v.name === this.selectedVoiceName);
+    if (targetVoiceName) {
+      voice = available.find((v) => v.name === targetVoiceName);
     }
 
     // 2. Fallback to Siri / Neural / Samantha
@@ -107,7 +108,7 @@ class TTSService {
       utterance.voice = voice;
     }
 
-    utterance.rate = this.speechRate;
+    utterance.rate = options?.rate ?? this.speechRate;
 
     utterance.onstart = () => {
       this.isPlaying = true;

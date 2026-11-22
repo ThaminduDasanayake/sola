@@ -16,7 +16,7 @@ export const VaultFeed: React.FC<VaultFeedProps> = ({
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-8 text-center select-none">
         <p className="text-[14px] font-medium text-[#d1d1d6]">No Bookmarks</p>
-        <p className="text-[12px] text-[#636366] mt-1">Press ⌘⇧S or click + to add a bookmark</p>
+        <p className="text-[12px] text-[#636366] mt-1">Press ⌘B or click + to add a bookmark</p>
       </div>
     );
   }

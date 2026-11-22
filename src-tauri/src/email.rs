@@ -64,6 +64,7 @@ pub fn fetch_account_emails(
     email: &str,
     app_password: &str,
     limit: usize,
+    deleted_ids: &std::collections::HashSet<String>,
 ) -> Result<Vec<EmailItem>, String> {
     let clean_password = app_password.replace(' ', "");
 
@@ -88,9 +89,10 @@ pub fn fetch_account_emails(
         return Ok(Vec::new());
     }
 
-    // Determine the sequence range for the most recent emails across all categories
-    let start = if total > limit as u32 {
-        total - limit as u32 + 1
+    // Determine sequence range: fetch extra candidates to backfill any deleted emails from the bottom
+    let fetch_count = (limit + deleted_ids.len()).min(total as usize);
+    let start = if total > fetch_count as u32 {
+        total - fetch_count as u32 + 1
     } else {
         1
     };
@@ -134,6 +136,11 @@ pub fn fetch_account_emails(
                 "message-id" => message_id = header.get_value(),
                 _ => {}
             }
+        }
+
+        // Never re-add an email that the user deleted in Sola
+        if deleted_ids.contains(&message_id) {
+            continue;
         }
 
         // Get preview snippet from message body
@@ -186,6 +193,10 @@ pub fn fetch_account_emails(
             received_at: date_str,
             account_email: email.to_string(),
         });
+
+        if items.len() >= limit {
+            break;
+        }
     }
 
     let _ = session.logout();
@@ -193,11 +204,19 @@ pub fn fetch_account_emails(
 }
 
 #[tauri::command]
-pub async fn sync_gmail_emails(limit: Option<usize>) -> Result<Vec<EmailItem>, String> {
+pub async fn sync_gmail_emails(
+    limit: Option<usize>,
+    deleted_ids: Option<Vec<String>>,
+) -> Result<Vec<EmailItem>, String> {
     let _ = dotenvy::dotenv();
     let _ = dotenvy::from_filename("../.env");
 
     let fetch_limit = limit.unwrap_or(40);
+    let deleted_set: std::collections::HashSet<String> = deleted_ids
+        .unwrap_or_default()
+        .into_iter()
+        .collect();
+
     let mut all_emails = Vec::new();
 
     // Account 1
@@ -206,7 +225,7 @@ pub async fn sync_gmail_emails(limit: Option<usize>) -> Result<Vec<EmailItem>, S
         env::var("GMAIL_1_APP_PASSWORD"),
     ) {
         if !email.trim().is_empty() && !pass.trim().is_empty() {
-            match fetch_account_emails(email.trim(), pass.trim(), fetch_limit) {
+            match fetch_account_emails(email.trim(), pass.trim(), fetch_limit, &deleted_set) {
                 Ok(mut list) => all_emails.append(&mut list),
                 Err(err) => eprintln!("Error fetching emails for {}: {}", email, err),
             }
@@ -219,7 +238,7 @@ pub async fn sync_gmail_emails(limit: Option<usize>) -> Result<Vec<EmailItem>, S
         env::var("GMAIL_2_APP_PASSWORD"),
     ) {
         if !email.trim().is_empty() && !pass.trim().is_empty() {
-            match fetch_account_emails(email.trim(), pass.trim(), fetch_limit) {
+            match fetch_account_emails(email.trim(), pass.trim(), fetch_limit, &deleted_set) {
                 Ok(mut list) => all_emails.append(&mut list),
                 Err(err) => eprintln!("Error fetching emails for {}: {}", email, err),
             }

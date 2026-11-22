@@ -6,6 +6,7 @@ import {
   Copy as CopyIcon,
   Check as CheckIcon,
   User as UserIcon,
+  Trash as TrashIcon,
 } from '@phosphor-icons/react';
 import { ttsService, TTSState } from '../services/tts';
 import type { Bookmark, EmailThread, ProjectTelemetry } from '../types';
@@ -13,9 +14,10 @@ import type { Bookmark, EmailThread, ProjectTelemetry } from '../types';
 interface DetailPaneProps {
   item: Bookmark | EmailThread | ProjectTelemetry | null;
   type: 'bookmark' | 'email' | 'project' | null;
+  onDeleteEmail?: (id: string) => void;
 }
 
-export const DetailPane: React.FC<DetailPaneProps> = ({ item, type }) => {
+export const DetailPane: React.FC<DetailPaneProps> = ({ item, type, onDeleteEmail }) => {
   const [copied, setCopied] = useState(false);
   const [ttsState, setTtsState] = useState<TTSState>({ isPlaying: false, currentText: null });
 
@@ -129,21 +131,31 @@ export const DetailPane: React.FC<DetailPaneProps> = ({ item, type }) => {
         {/* Detail Action Bar */}
         <div className="h-10 border-b border-white/[0.06] flex items-center justify-between px-6 shrink-0">
           <span className="text-[12px] text-[#e5a93c] font-medium">{email.category}</span>
-          <button
-            onClick={() => ttsService.toggle(textToRead)}
-            className={`h-7 px-3 rounded-full flex items-center gap-1.5 text-[12px] font-medium transition-colors ${
-              isThisPlaying
-                ? 'bg-[#e5a93c] text-[#1a1918]'
-                : 'text-[#8e8e93] hover:text-[#f5f5f7] hover:bg-white/[0.08]'
-            }`}
-          >
-            {isThisPlaying ? (
-              <SpeakerSimpleSlashIcon className="w-3.5 h-3.5" />
-            ) : (
-              <SpeakerHighIcon className="w-3.5 h-3.5 text-[#e5a93c]" />
-            )}
-            <span>{isThisPlaying ? 'Stop' : 'Listen'}</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => ttsService.toggle(textToRead)}
+              className={`h-7 px-3 rounded-full flex items-center gap-1.5 text-[12px] font-medium transition-colors ${
+                isThisPlaying
+                  ? 'bg-[#e5a93c] text-[#1a1918]'
+                  : 'text-[#8e8e93] hover:text-[#f5f5f7] hover:bg-white/[0.08]'
+              }`}
+            >
+              {isThisPlaying ? (
+                <SpeakerSimpleSlashIcon className="w-3.5 h-3.5" />
+              ) : (
+                <SpeakerHighIcon className="w-3.5 h-3.5 text-[#e5a93c]" />
+              )}
+              <span>{isThisPlaying ? 'Stop' : 'Listen'}</span>
+            </button>
+
+            <button
+              onClick={() => onDeleteEmail?.(email.id)}
+              className="w-7 h-7 rounded-full flex items-center justify-center text-[#8e8e93] hover:text-[#ff453a] hover:bg-white/[0.08] transition-colors"
+              title="Delete email (will not sync again)"
+            >
+              <TrashIcon className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
 
         {/* Content View */}

@@ -8,7 +8,7 @@ import { PulseFeed } from './components/pulse-feed';
 import { DetailPane } from './components/detail-pane';
 import { QuickAddModal } from './components/quick-add-modal';
 import { SettingsPage } from './components/settings-page';
-import { fetchBookmarks, fetchEmails, fetchProjects, addBookmark } from './services/db';
+import { fetchBookmarks, fetchEmails, fetchProjects, addBookmark, deleteEmail } from './services/db';
 import { syncManager } from './services/sync-manager';
 import type { Bookmark, EmailThread, ProjectTelemetry, ActiveTab, EmailCategoryTab } from './types';
 
@@ -26,7 +26,12 @@ export function App() {
   const [selectedProject, setSelectedProject] = useState<ProjectTelemetry | null>(null);
 
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('sola_sidebar_collapsed') === 'true';
+    }
+    return false;
+  });
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
   const [lastSyncText, setLastSyncText] = useState<string>(syncManager.formatRelativeLastSync());
@@ -102,7 +107,7 @@ export function App() {
         searchInput?.focus();
       }
 
-      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 's') {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'b') {
         e.preventDefault();
         setIsQuickAddOpen(true);
       }
@@ -126,6 +131,18 @@ export function App() {
     setBookmarks((prev) => [created, ...prev]);
     setSelectedBookmark(created);
     setActiveTab('vault');
+  };
+
+  const handleDeleteEmail = async (id: string) => {
+    setEmails((prev) => prev.filter((e) => e.id !== id));
+    if (selectedEmail?.id === id) {
+      const remaining = displayedCategoryEmails.filter((e) => e.id !== id);
+      setSelectedEmail(remaining[0] ?? null);
+    }
+    await deleteEmail(id);
+    syncManager.triggerSync().catch((err) => {
+      console.warn('Backfill sync error:', err);
+    });
   };
 
   const accounts = useMemo(() => {
@@ -179,6 +196,16 @@ export function App() {
 
   const unreadCount = displayedCategoryEmails.filter((e) => !e.is_read).length;
 
+  const handleToggleSidebar = () => {
+    setIsSidebarCollapsed((prev) => {
+      const next = !prev;
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('sola_sidebar_collapsed', String(next));
+      }
+      return next;
+    });
+  };
+
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-[#18181a] text-[#f5f5f7]">
       {/* Top Bar with 76px clearance for traffic lights & full-rounded controls */}
@@ -186,7 +213,7 @@ export function App() {
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         onOpenQuickAdd={() => setIsQuickAddOpen(true)}
-        onToggleSidebar={() => setIsSidebarCollapsed((prev) => !prev)}
+        onToggleSidebar={handleToggleSidebar}
         onSyncInbox={handleSync}
         isSyncing={isSyncing}
         activeTab={activeTab}
@@ -238,6 +265,7 @@ export function App() {
                   isSyncing={isSyncing}
                   categoryTab={categoryTab}
                   onCategoryChange={setCategoryTab}
+                  onDeleteEmail={handleDeleteEmail}
                 />
               )}
 
@@ -261,7 +289,7 @@ export function App() {
             {/* Pane 3: Detail View */}
             <div className="flex-1 bg-[#141416] flex flex-col overflow-hidden">
               {activeTab === 'inbox' && (
-                <DetailPane item={selectedEmail} type="email" />
+                <DetailPane item={selectedEmail} type="email" onDeleteEmail={handleDeleteEmail} />
               )}
               {activeTab === 'vault' && (
                 <DetailPane item={selectedBookmark} type="bookmark" />

@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { UserCircle as UserCircleIcon } from '@phosphor-icons/react';
+import { UserCircle as UserCircleIcon, Trash as TrashIcon } from '@phosphor-icons/react';
 import type { EmailThread, EmailCategoryTab } from '../types';
 
 interface InboxFeedProps {
@@ -13,6 +13,7 @@ interface InboxFeedProps {
   isSyncing?: boolean;
   categoryTab?: EmailCategoryTab;
   onCategoryChange?: (tab: EmailCategoryTab) => void;
+  onDeleteEmail?: (id: string) => void;
 }
 
 export const InboxFeed: React.FC<InboxFeedProps> = ({
@@ -26,6 +27,7 @@ export const InboxFeed: React.FC<InboxFeedProps> = ({
   isSyncing = false,
   categoryTab = 'Primary',
   onCategoryChange,
+  onDeleteEmail,
 }) => {
   // Categorize emails (supports both Gmail categories and legacy tags)
   const isPrimary = (e: EmailThread) =>
@@ -147,7 +149,7 @@ export const InboxFeed: React.FC<InboxFeedProps> = ({
               <div
                 key={item.id}
                 onClick={() => onSelect(item)}
-                className={`px-3 py-2.5 rounded-xl cursor-pointer transition-colors ${
+                className={`group px-3 py-2.5 rounded-xl cursor-pointer transition-colors ${
                   isSelected
                     ? 'bg-white/[0.12] text-[#f5f5f7]'
                     : 'hover:bg-white/[0.05] text-[#d1d1d6]'
@@ -181,12 +183,24 @@ export const InboxFeed: React.FC<InboxFeedProps> = ({
                       </span>
                     )}
                   </div>
-                  <span className="text-[11px] shrink-0 text-[#8e8e93]">
-                    {new Date(item.received_at).toLocaleTimeString([], {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
-                  </span>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDeleteEmail?.(item.id);
+                      }}
+                      className="opacity-0 group-hover:opacity-100 w-5 h-5 rounded-full flex items-center justify-center text-[#8e8e93] hover:text-[#ff453a] hover:bg-white/[0.1] transition-all"
+                      title="Delete email"
+                    >
+                      <TrashIcon className="w-3 h-3" />
+                    </button>
+                    <span className="text-[11px] text-[#8e8e93]">
+                      {new Date(item.received_at).toLocaleTimeString([], {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </span>
+                  </div>
                 </div>
 
                 <h3 className="text-[13px] font-medium line-clamp-1 leading-snug text-[#f5f5f7]">

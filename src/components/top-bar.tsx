@@ -233,7 +233,7 @@ export const TopBar: React.FC<TopBarProps> = ({
         <button
           onClick={onOpenQuickAdd}
           className="w-7 h-7 rounded-full bg-white/[0.08] border border-white/[0.06] hover:bg-white/[0.14] flex items-center justify-center text-white/90 transition-colors shadow-sm"
-          title="New bookmark (⌘⇧S)"
+          title="New bookmark (⌘B)"
         >
           <PlusIcon className="w-3.5 h-3.5" />
         </button>

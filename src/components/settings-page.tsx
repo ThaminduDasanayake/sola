@@ -10,9 +10,11 @@ import {
   Info as InfoIcon,
   ArrowLeft as ArrowLeftIcon,
   Clock as ClockIcon,
+  Folder as FolderIcon,
 } from '@phosphor-icons/react';
 import { ttsService } from '../services/tts';
 import { syncManager } from '../services/sync-manager';
+import { revealDatabaseInFinder } from '../services/db';
 
 interface SettingsPageProps {
   onBack?: () => void;
@@ -500,12 +502,28 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                   </div>
                   <div className="flex items-center justify-between py-1.5 border-b border-white/[0.04]">
                     <span className="text-[#d1d1d6]">Quick Add Bookmark</span>
-                    <kbd className="px-2 py-0.5 rounded-md bg-white/[0.08] font-mono text-[11px] text-[#f5f5f7]">⌘⇧S</kbd>
+                    <kbd className="px-2 py-0.5 rounded-md bg-white/[0.08] font-mono text-[11px] text-[#f5f5f7]">⌘B</kbd>
                   </div>
                   <div className="flex items-center justify-between py-1.5 border-b border-white/[0.04]">
                     <span className="text-[#d1d1d6]">Toggle Settings</span>
                     <kbd className="px-2 py-0.5 rounded-md bg-white/[0.08] font-mono text-[11px] text-[#f5f5f7]">⌘,</kbd>
                   </div>
+                </div>
+
+                <div className="pt-4 border-t border-white/[0.06] flex items-center justify-between">
+                  <div>
+                    <span className="text-[12.5px] font-medium text-[#f5f5f7]">Local Database (`sola.db`)</span>
+                    <p className="text-[11.5px] text-[#8e8e93] mt-0.5">
+                      Stored in Application Support and linked directly to your project folder.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => revealDatabaseInFinder()}
+                    className="h-8 px-3 rounded-full bg-white/[0.08] hover:bg-white/[0.14] border border-white/[0.08] text-[12px] font-medium text-[#f5f5f7] flex items-center gap-1.5 transition-colors"
+                  >
+                    <FolderIcon className="w-3.5 h-3.5 text-[#e5a93c]" />
+                    <span>Reveal in Finder</span>
+                  </button>
                 </div>
 
                 <div className="pt-4 border-t border-white/[0.06] flex items-start gap-3 text-[12px] text-[#8e8e93]">

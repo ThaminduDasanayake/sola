@@ -130,11 +130,66 @@ export async function fetchProjects(): Promise<ProjectTelemetry[]> {
   return memoryProjects;
 }
 
+export async function fetchDeletedEmailIds(): Promise<string[]> {
+  const db = await getDb();
+  if (db) {
+    try {
+      await db.execute(
+        `CREATE TABLE IF NOT EXISTS deleted_emails (
+          id TEXT PRIMARY KEY,
+          deleted_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );`
+      );
+      const rows = await db.select<{ id: string }[]>('SELECT id FROM deleted_emails');
+      return rows.map((r) => r.id);
+    } catch (e) {
+      console.warn('Failed to fetch deleted email ids:', e);
+    }
+  }
+  return [];
+}
+
+export async function deleteEmail(id: string): Promise<void> {
+  memoryEmails = memoryEmails.filter((e) => e.id !== id);
+  const db = await getDb();
+  if (db) {
+    try {
+      await db.execute('DELETE FROM emails WHERE id = ?', [id]);
+      await db.execute(
+        'INSERT OR REPLACE INTO deleted_emails (id, deleted_at) VALUES (?, ?)',
+        [id, new Date().toISOString()]
+      );
+    } catch (e) {
+      console.warn('Failed to delete email from SQLite:', e);
+    }
+  }
+}
+
+export async function getDatabasePath(): Promise<string> {
+  try {
+    return await invoke<string>('get_database_path');
+  } catch {
+    return 'sola.db (project root)';
+  }
+}
+
+export async function revealDatabaseInFinder(): Promise<void> {
+  try {
+    await invoke('reveal_database');
+  } catch (e) {
+    console.warn('Failed to reveal database:', e);
+  }
+}
+
 export async function syncGmail(limit?: number): Promise<EmailThread[]> {
   try {
     const savedLimit = typeof window !== 'undefined' ? parseInt(localStorage.getItem('sola_email_limit') || '40', 10) : 40;
     const fetchLimit = limit ?? savedLimit;
-    const fetched = await invoke<any[]>('sync_gmail_emails', { limit: fetchLimit });
+    const deletedIds = await fetchDeletedEmailIds();
+    const fetched = await invoke<any[]>('sync_gmail_emails', {
+      limit: fetchLimit,
+      deletedIds: deletedIds,
+    });
     if (fetched && fetched.length > 0) {
       if (typeof window !== 'undefined') {
         localStorage.setItem('sola_last_sync_time', Date.now().toString());

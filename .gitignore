@@ -16,6 +16,9 @@ dist-ssr
 .env.local
 src-tauri/.env
 src-tauri/.env.*
+*.db
+*.db-shm
+*.db-wal
 
 # Editor directories and files
 .vscode/*

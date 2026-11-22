@@ -32,7 +32,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     },
     {
       id: 'vault' as const,
-      label: 'Vault',
+      label: 'Bookmarks',
       icon: BookmarkSimpleIcon,
       count: bookmarkCount > 0 ? bookmarkCount : undefined,
     },

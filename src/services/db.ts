@@ -154,17 +154,27 @@ export async function fetchDeletedEmailIds(): Promise<string[]> {
 }
 
 export async function deleteEmail(id: string): Promise<void> {
-  memoryEmails = memoryEmails.filter((e) => e.id !== id);
+  await deleteEmails([id]);
+}
+
+export async function deleteEmails(ids: string[]): Promise<void> {
+  if (ids.length === 0) return;
+  const idSet = new Set(ids);
+  memoryEmails = memoryEmails.filter((e) => !idSet.has(e.id));
   const db = await getDb();
   if (db) {
     try {
-      await db.execute('DELETE FROM emails WHERE id = ?', [id]);
-      await db.execute(
-        'INSERT OR REPLACE INTO deleted_emails (id, deleted_at) VALUES (?, ?)',
-        [id, new Date().toISOString()]
-      );
+      const placeholders = ids.map(() => '?').join(',');
+      await db.execute(`DELETE FROM emails WHERE id IN (${placeholders})`, ids);
+      const now = new Date().toISOString();
+      for (const id of ids) {
+        await db.execute(
+          'INSERT OR REPLACE INTO deleted_emails (id, deleted_at) VALUES (?, ?)',
+          [id, now]
+        );
+      }
     } catch (e) {
-      console.warn('Failed to delete email from SQLite:', e);
+      console.warn('Failed to delete emails from SQLite:', e);
     }
   }
 }

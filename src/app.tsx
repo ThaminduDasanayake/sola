@@ -8,7 +8,8 @@ import { PulseFeed } from './components/pulse-feed';
 import { DetailPane } from './components/detail-pane';
 import { QuickAddModal } from './components/quick-add-modal';
 import { SettingsPage } from './components/settings-page';
-import { fetchBookmarks, fetchEmails, fetchProjects, addBookmark, deleteEmail } from './services/db';
+import { fetchBookmarks, fetchEmails, fetchProjects, addBookmark, deleteEmails } from './services/db';
+import { DeleteConfirmDialog } from './components/delete-confirm-dialog';
 import { syncManager } from './services/sync-manager';
 import type { Bookmark, EmailThread, ProjectTelemetry, ActiveTab, EmailCategoryTab } from './types';
 
@@ -133,16 +134,40 @@ export function App() {
     setActiveTab('vault');
   };
 
-  const handleDeleteEmail = async (id: string) => {
-    setEmails((prev) => prev.filter((e) => e.id !== id));
-    if (selectedEmail?.id === id) {
-      const remaining = displayedCategoryEmails.filter((e) => e.id !== id);
-      setSelectedEmail(remaining[0] ?? null);
-    }
-    await deleteEmail(id);
-    syncManager.triggerSync().catch((err) => {
-      console.warn('Backfill sync error:', err);
+  const [deleteConfirm, setDeleteConfirm] = useState<{
+    isOpen: boolean;
+    ids: string[];
+  } | null>(null);
+  const [isDeletingEmail, setIsDeletingEmail] = useState(false);
+
+  const requestDeleteEmails = (target: string | string[]) => {
+    const ids = Array.isArray(target) ? target : [target];
+    if (ids.length === 0) return;
+    setDeleteConfirm({
+      isOpen: true,
+      ids,
     });
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteConfirm || deleteConfirm.ids.length === 0) return;
+    setIsDeletingEmail(true);
+    try {
+      const ids = deleteConfirm.ids;
+      const idSet = new Set(ids);
+      setEmails((prev) => prev.filter((e) => !idSet.has(e.id)));
+      if (selectedEmail && idSet.has(selectedEmail.id)) {
+        const remaining = displayedCategoryEmails.filter((e) => !idSet.has(e.id));
+        setSelectedEmail(remaining[0] ?? null);
+      }
+      await deleteEmails(ids);
+      setDeleteConfirm(null);
+      syncManager.triggerSync().catch((err) => {
+        console.warn('Backfill sync error:', err);
+      });
+    } finally {
+      setIsDeletingEmail(false);
+    }
   };
 
   const accounts = useMemo(() => {
@@ -265,7 +290,8 @@ export function App() {
                   isSyncing={isSyncing}
                   categoryTab={categoryTab}
                   onCategoryChange={setCategoryTab}
-                  onDeleteEmail={handleDeleteEmail}
+                  onDeleteEmail={requestDeleteEmails}
+                  onDeleteEmails={requestDeleteEmails}
                 />
               )}
 
@@ -289,7 +315,7 @@ export function App() {
             {/* Pane 3: Detail View */}
             <div className="flex-1 bg-[#141416] flex flex-col overflow-hidden">
               {activeTab === 'inbox' && (
-                <DetailPane item={selectedEmail} type="email" onDeleteEmail={handleDeleteEmail} />
+                <DetailPane item={selectedEmail} type="email" onDeleteEmail={requestDeleteEmails} />
               )}
               {activeTab === 'vault' && (
                 <DetailPane item={selectedBookmark} type="bookmark" />
@@ -307,6 +333,15 @@ export function App() {
         isOpen={isQuickAddOpen}
         onClose={() => setIsQuickAddOpen(false)}
         onAdd={handleAddBookmark}
+      />
+
+      {/* Delete Verification Dialog */}
+      <DeleteConfirmDialog
+        isOpen={Boolean(deleteConfirm?.isOpen)}
+        count={deleteConfirm?.ids.length ?? 0}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setDeleteConfirm(null)}
+        isDeleting={isDeletingEmail}
       />
     </div>
   );

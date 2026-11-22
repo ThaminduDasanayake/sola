@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ArrowSquareOut as ArrowSquareOutIcon,
   SpeakerHigh as SpeakerHighIcon,
+  SpeakerSimpleSlash as SpeakerSimpleSlashIcon,
   Copy as CopyIcon,
   Check as CheckIcon,
 } from '@phosphor-icons/react';
-import { ttsService } from '../services/tts';
+import { ttsService, TTSState } from '../services/tts';
 import type { Bookmark, EmailThread, ProjectTelemetry } from '../types';
 
 interface DetailPaneProps {
@@ -15,6 +16,11 @@ interface DetailPaneProps {
 
 export const DetailPane: React.FC<DetailPaneProps> = ({ item, type }) => {
   const [copied, setCopied] = useState(false);
+  const [ttsState, setTtsState] = useState<TTSState>({ isPlaying: false, currentText: null });
+
+  useEffect(() => {
+    return ttsService.subscribe(setTtsState);
+  }, []);
 
   if (!item || !type) {
     return (
@@ -114,21 +120,28 @@ export const DetailPane: React.FC<DetailPaneProps> = ({ item, type }) => {
 
   if (type === 'email') {
     const email = item as EmailThread;
+    const textToRead = `${email.subject}. ${email.ai_summary || email.snippet}`;
+    const isThisPlaying = ttsState.isPlaying && ttsState.currentText === textToRead;
+
     return (
       <div className="flex-1 overflow-y-auto flex flex-col bg-[#141416]">
         {/* Detail Action Bar */}
         <div className="h-10 border-b border-white/[0.06] flex items-center justify-between px-6 shrink-0">
           <span className="text-[12px] text-[#e5a93c] font-medium">{email.category}</span>
           <button
-            onClick={() =>
-              ttsService.speak(
-                `${email.subject}. ${email.ai_summary || email.snippet}`
-              )
-            }
-            className="h-7 px-3 rounded-full flex items-center gap-1.5 text-[12px] text-[#8e8e93] hover:text-[#f5f5f7] hover:bg-white/[0.08] transition-colors"
+            onClick={() => ttsService.toggle(textToRead)}
+            className={`h-7 px-3 rounded-full flex items-center gap-1.5 text-[12px] font-medium transition-colors ${
+              isThisPlaying
+                ? 'bg-[#e5a93c] text-[#1a1918]'
+                : 'text-[#8e8e93] hover:text-[#f5f5f7] hover:bg-white/[0.08]'
+            }`}
           >
-            <SpeakerHighIcon className="w-3.5 h-3.5 text-[#e5a93c]" />
-            <span>Listen</span>
+            {isThisPlaying ? (
+              <SpeakerSimpleSlashIcon className="w-3.5 h-3.5" />
+            ) : (
+              <SpeakerHighIcon className="w-3.5 h-3.5 text-[#e5a93c]" />
+            )}
+            <span>{isThisPlaying ? 'Stop' : 'Listen'}</span>
           </button>
         </div>
 

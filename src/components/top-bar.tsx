@@ -1,24 +1,22 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import {
-  SpeakerHigh as SpeakerHighIcon,
-  SpeakerSimpleSlash as SpeakerSimpleSlashIcon,
   MagnifyingGlass as MagnifyingGlassIcon,
   Plus as PlusIcon,
   SidebarSimple as SidebarSimpleIcon,
   ArrowsClockwise as ArrowsClockwiseIcon,
+  GearSix as GearSixIcon,
 } from '@phosphor-icons/react';
-import { ttsService, TTSState } from '../services/tts';
-import type { EmailThread, ActiveTab } from '../types';
+import type { ActiveTab } from '../types';
 
 interface TopBarProps {
   searchQuery: string;
   onSearchChange: (q: string) => void;
   onOpenQuickAdd: () => void;
   onToggleSidebar: () => void;
+  onOpenSettings: () => void;
   onSyncInbox: () => void;
   isSyncing: boolean;
   activeTab: ActiveTab;
-  emails: EmailThread[];
 }
 
 export const TopBar: React.FC<TopBarProps> = ({
@@ -26,48 +24,20 @@ export const TopBar: React.FC<TopBarProps> = ({
   onSearchChange,
   onOpenQuickAdd,
   onToggleSidebar,
+  onOpenSettings,
   onSyncInbox,
   isSyncing,
   activeTab,
-  emails,
 }) => {
-  const [ttsState, setTtsState] = useState<TTSState>({ isPlaying: false, currentText: null });
-
-  useEffect(() => {
-    return ttsService.subscribe(setTtsState);
-  }, []);
-
-  const handleToggleDigest = () => {
-    if (ttsState.isPlaying) {
-      ttsService.stop();
-      return;
-    }
-
-    const unread = emails.filter((e) => !e.is_read || e.category === 'Action' || e.category === 'Newsletter');
-    if (unread.length === 0) {
-      ttsService.speak('Inbox is up to date.');
-      return;
-    }
-
-    const digestText = [
-      `You have ${unread.length} updates.`,
-      ...unread.slice(0, 3).map((item) => `${item.subject}. ${item.ai_summary || item.snippet}`),
-    ].join('. ');
-
-    ttsService.speak(digestText);
-  };
-
   return (
     <header
       data-tauri-drag-region
       className="h-11 bg-[#1c1c1e] border-b border-white/[0.08] flex items-center justify-between px-3 select-none shrink-0 cursor-default"
     >
-      {/* Left side: macOS traffic lights clearance + full-rounded sidebar toggle */}
+      {/* Left side: macOS traffic lights clearance + sidebar toggle */}
       <div data-tauri-drag-region className="flex items-center gap-2 shrink-0">
-        {/* Full clearance for macOS traffic lights (76px) */}
         <div data-tauri-drag-region className="w-[76px] shrink-0 h-full" />
 
-        {/* Apple rounded-full Sidebar Toggle */}
         <button
           onClick={onToggleSidebar}
           onMouseDown={(e) => e.stopPropagation()}
@@ -119,34 +89,25 @@ export const TopBar: React.FC<TopBarProps> = ({
         </div>
       </div>
 
-      {/* Right side: Apple rounded-full action pills */}
+      {/* Right side: Action buttons */}
       <div
         className="flex items-center gap-1.5 shrink-0"
         onMouseDown={(e) => e.stopPropagation()}
       >
-        <button
-          onClick={handleToggleDigest}
-          className={`h-7 px-3 flex items-center gap-1.5 rounded-full text-[12px] font-medium transition-all ${
-            ttsState.isPlaying
-              ? 'bg-[#e5a93c] text-[#1a1918]'
-              : 'bg-white/[0.08] border border-white/[0.06] text-[#d1d1d6] hover:text-white hover:bg-white/[0.12]'
-          }`}
-          title="Listen to briefing"
-        >
-          {ttsState.isPlaying ? (
-            <SpeakerSimpleSlashIcon className="w-3.5 h-3.5" />
-          ) : (
-            <SpeakerHighIcon className="w-3.5 h-3.5 text-[#e5a93c]" />
-          )}
-          <span>{ttsState.isPlaying ? 'Stop' : 'Briefing'}</span>
-        </button>
-
         <button
           onClick={onOpenQuickAdd}
           className="w-7 h-7 rounded-full bg-white/[0.08] border border-white/[0.06] hover:bg-white/[0.14] flex items-center justify-center text-white/90 transition-colors shadow-sm"
           title="New bookmark (⌘⇧S)"
         >
           <PlusIcon className="w-3.5 h-3.5" />
+        </button>
+
+        <button
+          onClick={onOpenSettings}
+          className="w-7 h-7 rounded-full bg-white/[0.08] border border-white/[0.06] hover:bg-white/[0.14] flex items-center justify-center text-white/90 transition-colors shadow-sm"
+          title="Settings (⌘,)"
+        >
+          <GearSixIcon className="w-3.5 h-3.5" />
         </button>
       </div>
     </header>

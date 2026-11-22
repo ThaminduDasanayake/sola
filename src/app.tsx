@@ -7,6 +7,7 @@ import { InboxFeed } from './components/inbox-feed';
 import { PulseFeed } from './components/pulse-feed';
 import { DetailPane } from './components/detail-pane';
 import { QuickAddModal } from './components/quick-add-modal';
+import { SettingsModal } from './components/settings-modal';
 import { fetchBookmarks, fetchEmails, fetchProjects, addBookmark, syncGmail } from './services/db';
 import type { Bookmark, EmailThread, ProjectTelemetry, ActiveTab } from './types';
 
@@ -22,6 +23,7 @@ export function App() {
   const [selectedProject, setSelectedProject] = useState<ProjectTelemetry | null>(null);
 
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
@@ -75,8 +77,14 @@ export function App() {
         setIsQuickAddOpen(true);
       }
 
+      if ((e.metaKey || e.ctrlKey) && e.key === ',') {
+        e.preventDefault();
+        setIsSettingsOpen(true);
+      }
+
       if (e.key === 'Escape') {
         setIsQuickAddOpen(false);
+        setIsSettingsOpen(false);
       }
     };
 
@@ -101,10 +109,10 @@ export function App() {
         onSearchChange={setSearchQuery}
         onOpenQuickAdd={() => setIsQuickAddOpen(true)}
         onToggleSidebar={() => setIsSidebarCollapsed((prev) => !prev)}
+        onOpenSettings={() => setIsSettingsOpen(true)}
         onSyncInbox={handleSync}
         isSyncing={isSyncing}
         activeTab={activeTab}
-        emails={emails}
       />
 
       {/* 3-Pane Body */}
@@ -171,6 +179,12 @@ export function App() {
         isOpen={isQuickAddOpen}
         onClose={() => setIsQuickAddOpen(false)}
         onAdd={handleAddBookmark}
+      />
+
+      {/* Settings Modal */}
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
       />
     </div>
   );

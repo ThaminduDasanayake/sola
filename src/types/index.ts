@@ -18,6 +18,7 @@ export interface EmailThread {
   category: 'Action' | 'Newsletter' | 'Dev' | 'Receipt' | 'Uncategorized';
   is_read: boolean;
   received_at: string;
+  account_email?: string;
   action_items?: string[];
   due_date?: string;
 }

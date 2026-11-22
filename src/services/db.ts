@@ -1,4 +1,5 @@
 import Database from '@tauri-apps/plugin-sql';
+import { invoke } from '@tauri-apps/api/core';
 import type { Bookmark, EmailThread, ProjectTelemetry } from '../types';
 
 let dbInstance: Database | null = null;
@@ -217,4 +218,43 @@ export async function fetchProjects(): Promise<ProjectTelemetry[]> {
     }
   }
   return memoryProjects;
+}
+
+export async function syncGmail(): Promise<EmailThread[]> {
+  try {
+    const fetched = await invoke<any[]>('sync_gmail_emails');
+    if (fetched && fetched.length > 0) {
+      memoryEmails = fetched;
+      const db = await getDb();
+      if (db) {
+        for (const item of fetched) {
+          try {
+            await db.execute(
+              `INSERT OR REPLACE INTO emails (id, thread_id, sender, subject, snippet, ai_summary, category, is_read, received_at, account_email)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              [
+                item.id,
+                item.thread_id,
+                item.sender,
+                item.subject,
+                item.snippet,
+                item.ai_summary || '',
+                item.category,
+                item.is_read ? 1 : 0,
+                item.received_at,
+                item.account_email,
+              ]
+            );
+          } catch (e) {
+            console.warn('Error saving synced email to sqlite:', e);
+          }
+        }
+      }
+      return fetched;
+    }
+  } catch (err) {
+    console.warn('Gmail sync error:', err);
+    throw err;
+  }
+  return fetchEmails();
 }

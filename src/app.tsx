@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import './app.css';
 import { TopBar } from './components/top-bar';
 import { Sidebar } from './components/sidebar';
@@ -7,7 +7,7 @@ import { InboxFeed } from './components/inbox-feed';
 import { PulseFeed } from './components/pulse-feed';
 import { DetailPane } from './components/detail-pane';
 import { QuickAddModal } from './components/quick-add-modal';
-import { SettingsModal } from './components/settings-modal';
+import { SettingsPage } from './components/settings-page';
 import { fetchBookmarks, fetchEmails, fetchProjects, addBookmark, syncGmail } from './services/db';
 import type { Bookmark, EmailThread, ProjectTelemetry, ActiveTab } from './types';
 
@@ -17,13 +17,13 @@ export function App() {
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
   const [emails, setEmails] = useState<EmailThread[]>([]);
   const [projects, setProjects] = useState<ProjectTelemetry[]>([]);
+  const [selectedAccount, setSelectedAccount] = useState<string>('all');
 
   const [selectedBookmark, setSelectedBookmark] = useState<Bookmark | null>(null);
   const [selectedEmail, setSelectedEmail] = useState<EmailThread | null>(null);
   const [selectedProject, setSelectedProject] = useState<ProjectTelemetry | null>(null);
 
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
@@ -79,12 +79,11 @@ export function App() {
 
       if ((e.metaKey || e.ctrlKey) && e.key === ',') {
         e.preventDefault();
-        setIsSettingsOpen(true);
+        setActiveTab((prev) => (prev === 'settings' ? 'inbox' : 'settings'));
       }
 
       if (e.key === 'Escape') {
         setIsQuickAddOpen(false);
-        setIsSettingsOpen(false);
       }
     };
 
@@ -99,7 +98,47 @@ export function App() {
     setActiveTab('vault');
   };
 
-  const unreadCount = emails.filter((e) => !e.is_read).length;
+  const accounts = useMemo(() => {
+    const set = new Set<string>();
+    emails.forEach((e) => {
+      if (e.account_email) set.add(e.account_email);
+    });
+    return Array.from(set);
+  }, [emails]);
+
+  const emailCountsByAccount = useMemo(() => {
+    const counts: Record<string, { total: number; unread: number }> = {
+      all: {
+        total: emails.length,
+        unread: emails.filter((e) => !e.is_read).length,
+      },
+    };
+    accounts.forEach((acc) => {
+      const accEmails = emails.filter((e) => e.account_email === acc);
+      counts[acc] = {
+        total: accEmails.length,
+        unread: accEmails.filter((e) => !e.is_read).length,
+      };
+    });
+    return counts;
+  }, [emails, accounts]);
+
+  const filteredEmails = useMemo(() => {
+    if (selectedAccount === 'all') return emails;
+    return emails.filter((e) => e.account_email === selectedAccount);
+  }, [emails, selectedAccount]);
+
+  useEffect(() => {
+    if (filteredEmails.length > 0) {
+      if (!selectedEmail || !filteredEmails.some((e) => e.id === selectedEmail.id)) {
+        setSelectedEmail(filteredEmails[0]);
+      }
+    } else {
+      setSelectedEmail(null);
+    }
+  }, [selectedAccount, filteredEmails]);
+
+  const unreadCount = emailCountsByAccount[selectedAccount]?.unread ?? 0;
 
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-[#18181a] text-[#f5f5f7]">
@@ -109,10 +148,13 @@ export function App() {
         onSearchChange={setSearchQuery}
         onOpenQuickAdd={() => setIsQuickAddOpen(true)}
         onToggleSidebar={() => setIsSidebarCollapsed((prev) => !prev)}
-        onOpenSettings={() => setIsSettingsOpen(true)}
         onSyncInbox={handleSync}
         isSyncing={isSyncing}
         activeTab={activeTab}
+        accounts={accounts}
+        selectedAccount={selectedAccount}
+        onSelectAccount={setSelectedAccount}
+        emailCountsByAccount={emailCountsByAccount}
       />
 
       {/* 3-Pane Body */}
@@ -127,51 +169,65 @@ export function App() {
           healthyProjectsCount={projects.length}
         />
 
-        {/* Pane 2: List Feed */}
-        <div className="w-72 border-r border-white/[0.08] bg-[#18181a] flex flex-col shrink-0">
-          {syncError && activeTab === 'inbox' && (
-            <div className="px-3 py-1.5 bg-red-500/10 border-b border-red-500/20 text-[11px] text-red-300">
-              {syncError}
+        {/* Main Content Area */}
+        {activeTab === 'settings' ? (
+          <SettingsPage
+            onBack={() => setActiveTab('inbox')}
+            onSyncInbox={handleSync}
+            isSyncing={isSyncing}
+          />
+        ) : (
+          <>
+            {/* Pane 2: List Feed */}
+            <div className="w-72 border-r border-white/[0.08] bg-[#18181a] flex flex-col shrink-0">
+              {syncError && activeTab === 'inbox' && (
+                <div className="px-3 py-1.5 bg-red-500/10 border-b border-red-500/20 text-[11px] text-red-300">
+                  {syncError}
+                </div>
+              )}
+
+              {activeTab === 'inbox' && (
+                <InboxFeed
+                  emails={filteredEmails}
+                  selectedId={selectedEmail?.id ?? null}
+                  onSelect={setSelectedEmail}
+                  selectedAccount={selectedAccount}
+                  accounts={accounts}
+                  onSelectAccount={setSelectedAccount}
+                />
+              )}
+
+              {activeTab === 'vault' && (
+                <VaultFeed
+                  bookmarks={bookmarks}
+                  selectedId={selectedBookmark?.id ?? null}
+                  onSelect={setSelectedBookmark}
+                />
+              )}
+
+              {activeTab === 'pulse' && (
+                <PulseFeed
+                  projects={projects}
+                  selectedId={selectedProject?.id ?? null}
+                  onSelect={setSelectedProject}
+                />
+              )}
             </div>
-          )}
 
-          {activeTab === 'inbox' && (
-            <InboxFeed
-              emails={emails}
-              selectedId={selectedEmail?.id ?? null}
-              onSelect={setSelectedEmail}
-            />
-          )}
-
-          {activeTab === 'vault' && (
-            <VaultFeed
-              bookmarks={bookmarks}
-              selectedId={selectedBookmark?.id ?? null}
-              onSelect={setSelectedBookmark}
-            />
-          )}
-
-          {activeTab === 'pulse' && (
-            <PulseFeed
-              projects={projects}
-              selectedId={selectedProject?.id ?? null}
-              onSelect={setSelectedProject}
-            />
-          )}
-        </div>
-
-        {/* Pane 3: Detail View */}
-        <div className="flex-1 bg-[#141416] flex flex-col overflow-hidden">
-          {activeTab === 'inbox' && (
-            <DetailPane item={selectedEmail} type="email" />
-          )}
-          {activeTab === 'vault' && (
-            <DetailPane item={selectedBookmark} type="bookmark" />
-          )}
-          {activeTab === 'pulse' && (
-            <DetailPane item={selectedProject} type="project" />
-          )}
-        </div>
+            {/* Pane 3: Detail View */}
+            <div className="flex-1 bg-[#141416] flex flex-col overflow-hidden">
+              {activeTab === 'inbox' && (
+                <DetailPane item={selectedEmail} type="email" />
+              )}
+              {activeTab === 'vault' && (
+                <DetailPane item={selectedBookmark} type="bookmark" />
+              )}
+              {activeTab === 'pulse' && (
+                <DetailPane item={selectedProject} type="project" />
+              )}
+            </div>
+          </>
+        )}
       </div>
 
       {/* Quick Add Modal */}
@@ -179,12 +235,6 @@ export function App() {
         isOpen={isQuickAddOpen}
         onClose={() => setIsQuickAddOpen(false)}
         onAdd={handleAddBookmark}
-      />
-
-      {/* Settings Modal */}
-      <SettingsModal
-        isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
       />
     </div>
   );

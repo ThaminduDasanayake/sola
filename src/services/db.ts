@@ -130,9 +130,11 @@ export async function fetchProjects(): Promise<ProjectTelemetry[]> {
   return memoryProjects;
 }
 
-export async function syncGmail(): Promise<EmailThread[]> {
+export async function syncGmail(limit?: number): Promise<EmailThread[]> {
   try {
-    const fetched = await invoke<any[]>('sync_gmail_emails');
+    const savedLimit = typeof window !== 'undefined' ? parseInt(localStorage.getItem('sola_email_limit') || '40', 10) : 40;
+    const fetchLimit = limit ?? savedLimit;
+    const fetched = await invoke<any[]>('sync_gmail_emails', { limit: fetchLimit });
     if (fetched && fetched.length > 0) {
       memoryEmails = fetched;
       const db = await getDb();

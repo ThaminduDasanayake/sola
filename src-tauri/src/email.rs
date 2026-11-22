@@ -79,18 +79,48 @@ pub fn fetch_account_emails(
         return Ok(Vec::new());
     }
 
-    // Determine the sequence range for the most recent emails
-    let total = mailbox.exists;
-    let start = if total > limit as u32 {
-        total - limit as u32 + 1
-    } else {
-        1
+    // Gmail-specific search: Primary & Updates categories, exclude LinkedIn and Social/Promotions
+    // Gmail natively supports the X-GM-RAW IMAP extension query.
+    let search_query = "X-GM-RAW \"(category:primary OR category:updates) -from:linkedin -category:social -category:promotions\"";
+    
+    let messages = match session.uid_search(search_query) {
+        Ok(uid_set) if !uid_set.is_empty() => {
+            let mut uids: Vec<u32> = uid_set.into_iter().collect();
+            uids.sort_unstable();
+            
+            // Take the most recent `limit` emails
+            let target_uids = if uids.len() > limit {
+                &uids[uids.len() - limit..]
+            } else {
+                &uids[..]
+            };
+            
+            let seq = target_uids
+                .iter()
+                .map(|u| u.to_string())
+                .collect::<Vec<_>>()
+                .join(",");
+                
+            session
+                .uid_fetch(&seq, "(RFC822.HEADER BODY[TEXT] FLAGS)")
+                .map_err(|e| format!("Failed to fetch messages by UID: {}", e))?
+        }
+        _ => {
+            // Fallback to standard sequence fetching if X-GM-RAW search fails or is unsupported
+            let total = mailbox.exists;
+            // Fetch more than limit so we can discard LinkedIn / Social in code
+            let fetch_range = (limit * 2).min(100);
+            let start = if total > fetch_range as u32 {
+                total - fetch_range as u32 + 1
+            } else {
+                1
+            };
+            let sequence_set = format!("{}:{}", start, total);
+            session
+                .fetch(&sequence_set, "(RFC822.HEADER BODY[TEXT] FLAGS)")
+                .map_err(|e| format!("Failed to fetch messages: {}", e))?
+        }
     };
-    let sequence_set = format!("{}:{}", start, total);
-
-    let messages = session
-        .fetch(&sequence_set, "(RFC822.HEADER BODY[TEXT] FLAGS)")
-        .map_err(|e| format!("Failed to fetch messages: {}", e))?;
 
     let mut items = Vec::new();
 
@@ -112,6 +142,17 @@ pub fn fetch_account_emails(
                 "message-id" => message_id = header.get_value(),
                 _ => {}
             }
+        }
+
+        let lower_from = from.to_lowercase();
+        let lower_subj = subject.to_lowercase();
+
+        // Extra safeguard: explicitly filter out LinkedIn and social spam
+        if lower_from.contains("linkedin.com")
+            || lower_from.contains("linkedin")
+            || lower_subj.contains("linkedin")
+        {
+            continue;
         }
 
         // Get preview snippet from message body
@@ -148,6 +189,10 @@ pub fn fetch_account_emails(
             received_at: date_str,
             account_email: email.to_string(),
         });
+
+        if items.len() >= limit {
+            break;
+        }
     }
 
     let _ = session.logout();
@@ -155,10 +200,11 @@ pub fn fetch_account_emails(
 }
 
 #[tauri::command]
-pub async fn sync_gmail_emails() -> Result<Vec<EmailItem>, String> {
+pub async fn sync_gmail_emails(limit: Option<usize>) -> Result<Vec<EmailItem>, String> {
     let _ = dotenvy::dotenv();
     let _ = dotenvy::from_filename("../.env");
 
+    let fetch_limit = limit.unwrap_or(40);
     let mut all_emails = Vec::new();
 
     // Account 1
@@ -167,7 +213,7 @@ pub async fn sync_gmail_emails() -> Result<Vec<EmailItem>, String> {
         env::var("GMAIL_1_APP_PASSWORD"),
     ) {
         if !email.trim().is_empty() && !pass.trim().is_empty() {
-            match fetch_account_emails(email.trim(), pass.trim(), 15) {
+            match fetch_account_emails(email.trim(), pass.trim(), fetch_limit) {
                 Ok(mut list) => all_emails.append(&mut list),
                 Err(err) => eprintln!("Error fetching emails for {}: {}", email, err),
             }
@@ -180,7 +226,7 @@ pub async fn sync_gmail_emails() -> Result<Vec<EmailItem>, String> {
         env::var("GMAIL_2_APP_PASSWORD"),
     ) {
         if !email.trim().is_empty() && !pass.trim().is_empty() {
-            match fetch_account_emails(email.trim(), pass.trim(), 15) {
+            match fetch_account_emails(email.trim(), pass.trim(), fetch_limit) {
                 Ok(mut list) => all_emails.append(&mut list),
                 Err(err) => eprintln!("Error fetching emails for {}: {}", email, err),
             }

@@ -5,6 +5,7 @@ import {
   SpeakerSimpleSlash as SpeakerSimpleSlashIcon,
   Copy as CopyIcon,
   Check as CheckIcon,
+  User as UserIcon,
 } from '@phosphor-icons/react';
 import { ttsService, TTSState } from '../services/tts';
 import type { Bookmark, EmailThread, ProjectTelemetry } from '../types';
@@ -151,12 +152,23 @@ export const DetailPane: React.FC<DetailPaneProps> = ({ item, type }) => {
             <h1 className="text-[20px] font-semibold text-[#f5f5f7] leading-tight tracking-tight">
               {email.subject}
             </h1>
-            <div className="flex items-center justify-between text-[12px] text-[#8e8e93] mt-2">
-              <span>{email.sender}</span>
-              <span>{new Date(email.received_at).toLocaleString([], {
-                dateStyle: 'medium',
-                timeStyle: 'short',
-              })}</span>
+            <div className="space-y-1.5 mt-2.5">
+              <div className="flex items-center justify-between text-[12px] text-[#8e8e93]">
+                <span className="text-[#f5f5f7] font-medium">{email.sender}</span>
+                <span>{new Date(email.received_at).toLocaleString([], {
+                  dateStyle: 'medium',
+                  timeStyle: 'short',
+                })}</span>
+              </div>
+              {email.account_email && (
+                <div className="flex items-center gap-1.5 text-[11.5px] text-[#8e8e93]">
+                  <span>To:</span>
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/[0.06] border border-white/[0.06] text-[#d1d1d6] font-medium">
+                    <UserIcon className="w-3 h-3 text-[#e5a93c]" />
+                    {email.account_email}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 

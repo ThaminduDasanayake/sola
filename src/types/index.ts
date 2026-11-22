@@ -38,4 +38,4 @@ export interface ProjectTelemetry {
   };
 }
 
-export type ActiveTab = 'vault' | 'inbox' | 'pulse';
+export type ActiveTab = 'inbox' | 'vault' | 'pulse' | 'settings';

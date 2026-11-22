@@ -31,6 +31,25 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Clickable items cursor pointer */
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]),
+select:not(:disabled),
+input[type="range"],
+input[type="checkbox"],
+input[type="radio"],
+input[type="submit"],
+input[type="button"],
+.cursor-pointer {
+  cursor: pointer;
+}
+
+button:disabled,
+[role="button"][aria-disabled="true"],
+.cursor-not-allowed {
+  cursor: not-allowed;
+}
+
 /* Subtle Apple macOS scrollbar */
 ::-webkit-scrollbar {
   width: 6px;

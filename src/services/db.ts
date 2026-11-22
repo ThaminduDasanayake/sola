@@ -103,7 +103,11 @@ export async function fetchEmails(): Promise<EmailThread[]> {
   const db = await getDb();
   if (db) {
     try {
-      const rows = await db.select<any[]>('SELECT * FROM emails ORDER BY received_at DESC');
+      const rows = await db.select<any[]>(
+        `SELECT * FROM emails 
+         WHERE category IN ('Primary', 'Updates', 'Action', 'Dev', 'Receipt') 
+         ORDER BY received_at DESC`
+      );
       if (rows.length > 0) {
         return rows.map((r) => ({
           ...r,
@@ -205,6 +209,15 @@ export async function syncGmail(limit?: number): Promise<EmailThread[]> {
       memoryEmails = fetched;
       const db = await getDb();
       if (db) {
+        // Clean out any legacy or promotional/social/forum emails
+        try {
+          await db.execute(
+            `DELETE FROM emails WHERE category NOT IN ('Primary', 'Updates', 'Action', 'Dev', 'Receipt')`
+          );
+        } catch (e) {
+          console.warn('Could not prune non-primary categories:', e);
+        }
+
         for (const item of fetched) {
           try {
             await db.execute(

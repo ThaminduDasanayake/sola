@@ -59,7 +59,9 @@ export const InboxFeed: React.FC<InboxFeedProps> = ({
           </span>
         </div>
         <div className="flex items-center gap-1.5 text-[#8e8e93] shrink-0 text-[10px] font-mono">
-          <span>{displayedEmails.length} {displayedEmails.length === 1 ? 'msg' : 'msgs'}</span>
+          <span>
+            {displayedEmails.length} {categoryTab === 'All' ? (displayedEmails.length === 1 ? 'msg' : 'msgs') : `in ${categoryTab}`}
+          </span>
           {lastSyncText && (
             <>
               <span className="text-white/20">•</span>

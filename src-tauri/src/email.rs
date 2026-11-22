@@ -63,7 +63,7 @@ fn categorize_email(sender: &str, subject: &str) -> String {
 pub fn fetch_account_emails(
     email: &str,
     app_password: &str,
-    limit: usize,
+    limit_per_category: usize,
     deleted_ids: &std::collections::HashSet<String>,
 ) -> Result<Vec<EmailItem>, String> {
     let clean_password = app_password.replace(' ', "");
@@ -89,118 +89,253 @@ pub fn fetch_account_emails(
         return Ok(Vec::new());
     }
 
-    // Determine sequence range: fetch extra candidates to backfill any deleted emails from the bottom
-    let fetch_count = (limit + deleted_ids.len()).min(total as usize);
-    let start = if total > fetch_count as u32 {
-        total - fetch_count as u32 + 1
-    } else {
-        1
-    };
-    let sequence_set = format!("{}:{}", start, total);
-
-    // Query Gmail's categories by UID search for accurate classification
-    let primary_uids: std::collections::HashSet<u32> = session
+    // Query Gmail's categories by UID search
+    // We only fetch Primary and Updates (strictly 40 each, excluding Promotions, Social, Forums)
+    let mut primary_uids: Vec<u32> = session
         .uid_search("X-GM-RAW \"category:primary\"")
-        .unwrap_or_default();
-    let updates_uids: std::collections::HashSet<u32> = session
+        .unwrap_or_default()
+        .into_iter()
+        .collect();
+    primary_uids.sort_unstable(); // Ascending order: highest UID = newest email
+
+    let mut updates_uids: Vec<u32> = session
         .uid_search("X-GM-RAW \"category:updates\"")
-        .unwrap_or_default();
-    let promo_uids: std::collections::HashSet<u32> = session
-        .uid_search("X-GM-RAW \"category:promotions\"")
-        .unwrap_or_default();
-    let social_uids: std::collections::HashSet<u32> = session
-        .uid_search("X-GM-RAW \"category:social\"")
-        .unwrap_or_default();
+        .unwrap_or_default()
+        .into_iter()
+        .collect();
+    updates_uids.sort_unstable();
 
-    let messages = session
-        .fetch(&sequence_set, "(UID RFC822.HEADER BODY[TEXT] FLAGS)")
-        .map_err(|e| format!("Failed to fetch messages: {}", e))?;
+    let candidate_backfill = deleted_ids.len().min(30);
+    let candidate_count = limit_per_category + candidate_backfill;
 
-    let mut items = Vec::new();
+    let primary_candidates: std::collections::HashSet<u32> = primary_uids
+        .iter()
+        .rev()
+        .take(candidate_count)
+        .copied()
+        .collect();
 
-    for msg in messages.iter().rev() {
-        let header_bytes = msg.header().unwrap_or_default();
-        let parsed_headers = mailparse::parse_mail(header_bytes)
-            .map_err(|e| format!("Failed to parse headers: {}", e))?;
+    let updates_candidates: std::collections::HashSet<u32> = updates_uids
+        .iter()
+        .rev()
+        .take(candidate_count)
+        .copied()
+        .collect();
 
-        let mut subject = String::from("(No Subject)");
-        let mut from = String::from("Unknown");
-        let mut date_str = String::new();
-        let mut message_id = format!("msg-{}", msg.message);
+    let mut target_uids: Vec<u32> = primary_candidates
+        .iter()
+        .chain(updates_candidates.iter())
+        .copied()
+        .collect();
+    target_uids.sort_unstable();
+    target_uids.dedup();
 
-        for header in parsed_headers.headers {
-            match header.get_key().to_lowercase().as_str() {
-                "subject" => subject = header.get_value(),
-                "from" => from = header.get_value(),
-                "date" => date_str = header.get_value(),
-                "message-id" => message_id = header.get_value(),
-                _ => {}
+    let mut primary_items: Vec<(u32, EmailItem)> = Vec::new();
+    let mut updates_items: Vec<(u32, EmailItem)> = Vec::new();
+
+    if !target_uids.is_empty() {
+        // Fetch candidates in chunks of 50 UIDs to stay well within IMAP buffer limits
+        for chunk in target_uids.chunks(50) {
+            let uid_seq = chunk
+                .iter()
+                .map(|u| u.to_string())
+                .collect::<Vec<_>>()
+                .join(",");
+
+            let messages = session
+                .uid_fetch(&uid_seq, "(UID RFC822.HEADER BODY[TEXT] FLAGS)")
+                .map_err(|e| format!("Failed to fetch messages by UID: {}", e))?;
+
+            for msg in messages.iter() {
+                let uid = match msg.uid {
+                    Some(u) => u,
+                    None => continue,
+                };
+
+                let category = if primary_candidates.contains(&uid) {
+                    "Primary".to_string()
+                } else if updates_candidates.contains(&uid) {
+                    "Updates".to_string()
+                } else {
+                    // Strictly exclude Social, Promotions, Forums
+                    continue;
+                };
+
+                let header_bytes = msg.header().unwrap_or_default();
+                let parsed_headers = match mailparse::parse_mail(header_bytes) {
+                    Ok(h) => h,
+                    Err(_) => continue,
+                };
+
+                let mut subject = String::from("(No Subject)");
+                let mut from = String::from("Unknown");
+                let mut date_str = String::new();
+                let mut message_id = format!("msg-{}", msg.message);
+
+                for header in parsed_headers.headers {
+                    match header.get_key().to_lowercase().as_str() {
+                        "subject" => subject = header.get_value(),
+                        "from" => from = header.get_value(),
+                        "date" => date_str = header.get_value(),
+                        "message-id" => message_id = header.get_value(),
+                        _ => {}
+                    }
+                }
+
+                // Never re-add an email that the user deleted in Sola
+                if deleted_ids.contains(&message_id) {
+                    continue;
+                }
+
+                // Get preview snippet from message body
+                let body_bytes = msg.text().unwrap_or_default();
+                let raw_text = String::from_utf8_lossy(body_bytes);
+                let snippet: String = raw_text
+                    .lines()
+                    .map(|l| l.trim())
+                    .filter(|l| !l.is_empty() && !l.starts_with('>') && !l.starts_with('-'))
+                    .take(3)
+                    .collect::<Vec<&str>>()
+                    .join(" ");
+
+                let clean_snippet = if snippet.is_empty() {
+                    subject.clone()
+                } else if snippet.len() > 160 {
+                    format!("{}...", &snippet[..160])
+                } else {
+                    snippet
+                };
+
+                let is_seen = msg.flags().iter().any(|f| matches!(f, imap::types::Flag::Seen));
+
+                let item = EmailItem {
+                    id: message_id,
+                    thread_id: format!("th-{}", uid),
+                    sender: from,
+                    subject,
+                    snippet: clean_snippet,
+                    ai_summary: None,
+                    category: category.clone(),
+                    is_read: is_seen,
+                    received_at: date_str,
+                    account_email: email.to_string(),
+                };
+
+                if category == "Primary" {
+                    primary_items.push((uid, item));
+                } else {
+                    updates_items.push((uid, item));
+                }
             }
         }
-
-        // Never re-add an email that the user deleted in Sola
-        if deleted_ids.contains(&message_id) {
-            continue;
-        }
-
-        // Get preview snippet from message body
-        let body_bytes = msg.text().unwrap_or_default();
-        let raw_text = String::from_utf8_lossy(body_bytes);
-        let snippet: String = raw_text
-            .lines()
-            .map(|l| l.trim())
-            .filter(|l| !l.is_empty() && !l.starts_with('>') && !l.starts_with('-'))
-            .take(3)
-            .collect::<Vec<&str>>()
-            .join(" ");
-
-        let clean_snippet = if snippet.is_empty() {
-            subject.clone()
-        } else if snippet.len() > 160 {
-            format!("{}...", &snippet[..160])
+    } else {
+        // Fallback if category search returned no UIDs (e.g. non-Gmail server)
+        let fetch_count = ((limit_per_category * 2) + candidate_backfill).min(total as usize);
+        let start = if total > fetch_count as u32 {
+            total - fetch_count as u32 + 1
         } else {
-            snippet
+            1
         };
+        let sequence_set = format!("{}:{}", start, total);
 
-        let is_seen = msg.flags().iter().any(|f| matches!(f, imap::types::Flag::Seen));
+        let messages = session
+            .fetch(&sequence_set, "(UID RFC822.HEADER BODY[TEXT] FLAGS)")
+            .map_err(|e| format!("Failed to fetch messages: {}", e))?;
 
-        // Assign category via Gmail UID category search, or fallback to heuristics
-        let category = if let Some(uid) = msg.uid {
-            if primary_uids.contains(&uid) {
-                "Primary".to_string()
-            } else if updates_uids.contains(&uid) {
-                "Updates".to_string()
-            } else if promo_uids.contains(&uid) {
-                "Promotions".to_string()
-            } else if social_uids.contains(&uid) {
-                "Social".to_string()
+        for msg in messages.iter().rev() {
+            let uid = msg.uid.unwrap_or(msg.message);
+
+            let header_bytes = msg.header().unwrap_or_default();
+            let parsed_headers = match mailparse::parse_mail(header_bytes) {
+                Ok(h) => h,
+                Err(_) => continue,
+            };
+
+            let mut subject = String::from("(No Subject)");
+            let mut from = String::from("Unknown");
+            let mut date_str = String::new();
+            let mut message_id = format!("msg-{}", msg.message);
+
+            for header in parsed_headers.headers {
+                match header.get_key().to_lowercase().as_str() {
+                    "subject" => subject = header.get_value(),
+                    "from" => from = header.get_value(),
+                    "date" => date_str = header.get_value(),
+                    "message-id" => message_id = header.get_value(),
+                    _ => {}
+                }
+            }
+
+            if deleted_ids.contains(&message_id) {
+                continue;
+            }
+
+            let category = categorize_email(&from, &subject);
+            // Strictly exclude Promotions, Social, Forums
+            if category != "Primary" && category != "Updates" {
+                continue;
+            }
+
+            let body_bytes = msg.text().unwrap_or_default();
+            let raw_text = String::from_utf8_lossy(body_bytes);
+            let snippet: String = raw_text
+                .lines()
+                .map(|l| l.trim())
+                .filter(|l| !l.is_empty() && !l.starts_with('>') && !l.starts_with('-'))
+                .take(3)
+                .collect::<Vec<&str>>()
+                .join(" ");
+
+            let clean_snippet = if snippet.is_empty() {
+                subject.clone()
+            } else if snippet.len() > 160 {
+                format!("{}...", &snippet[..160])
             } else {
-                categorize_email(&from, &subject)
+                snippet
+            };
+
+            let is_seen = msg.flags().iter().any(|f| matches!(f, imap::types::Flag::Seen));
+
+            let item = EmailItem {
+                id: message_id,
+                thread_id: format!("th-{}", uid),
+                sender: from,
+                subject,
+                snippet: clean_snippet,
+                ai_summary: None,
+                category: category.clone(),
+                is_read: is_seen,
+                received_at: date_str,
+                account_email: email.to_string(),
+            };
+
+            if category == "Primary" {
+                primary_items.push((uid, item));
+            } else {
+                updates_items.push((uid, item));
             }
-        } else {
-            categorize_email(&from, &subject)
-        };
-
-        items.push(EmailItem {
-            id: message_id.clone(),
-            thread_id: format!("th-{}", msg.message),
-            sender: from,
-            subject,
-            snippet: clean_snippet,
-            ai_summary: None,
-            category,
-            is_read: is_seen,
-            received_at: date_str,
-            account_email: email.to_string(),
-        });
-
-        if items.len() >= limit {
-            break;
         }
     }
 
+    // Sort each category descending by UID (newest first)
+    primary_items.sort_by(|a, b| b.0.cmp(&a.0));
+    updates_items.sort_by(|a, b| b.0.cmp(&a.0));
+
+    // Limit to up to limit_per_category each (e.g. 40 each)
+    primary_items.truncate(limit_per_category);
+    updates_items.truncate(limit_per_category);
+
+    // Combine all and sort chronologically by UID descending
+    let mut all_items: Vec<(u32, EmailItem)> = primary_items
+        .into_iter()
+        .chain(updates_items.into_iter())
+        .collect();
+    all_items.sort_by(|a, b| b.0.cmp(&a.0));
+
+    let final_items: Vec<EmailItem> = all_items.into_iter().map(|(_, item)| item).collect();
+
     let _ = session.logout();
-    Ok(items)
+    Ok(final_items)
 }
 
 #[tauri::command]

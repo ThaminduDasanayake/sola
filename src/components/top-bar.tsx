@@ -27,6 +27,18 @@ export const TopBar: React.FC<TopBarProps> = ({
     return ttsService.subscribe(setTtsState);
   }, []);
 
+  const handleMouseDown = async (e: React.MouseEvent) => {
+    // Only initiate window drag on left-click when not clicking on an interactive control
+    if (e.button === 0 && (e.target as HTMLElement).closest('button, input, a') === null) {
+      try {
+        const { getCurrentWindow } = await import('@tauri-apps/api/window');
+        await getCurrentWindow().startDragging();
+      } catch {
+        // Fallback for browser testing
+      }
+    }
+  };
+
   const handleToggleDigest = () => {
     if (ttsState.isPlaying) {
       ttsService.stop();
@@ -48,12 +60,19 @@ export const TopBar: React.FC<TopBarProps> = ({
   };
 
   return (
-    <header className="titlebar-drag-region h-11 bg-[#17171a] border-b border-white/[0.06] flex items-center justify-between px-3 select-none shrink-0">
-      {/* Left traffic-light spacer */}
-      <div className="w-18 shrink-0" />
+    <header
+      data-tauri-drag-region
+      onMouseDown={handleMouseDown}
+      className="h-11 bg-[#17171a] border-b border-white/[0.06] flex items-center justify-between px-3 select-none shrink-0 cursor-default"
+    >
+      {/* Left traffic-light spacer (draggable) */}
+      <div data-tauri-drag-region className="w-18 shrink-0 h-full" />
 
-      {/* Center Search Input */}
-      <div className="flex-1 max-w-sm mx-auto no-drag">
+      {/* Center Search Input (interactive, stop propagation) */}
+      <div
+        className="flex-1 max-w-sm mx-auto"
+        onMouseDown={(e) => e.stopPropagation()}
+      >
         <div className="relative flex items-center">
           <MagnifyingGlassIcon className="w-3.5 h-3.5 absolute left-2.5 text-[#86868b] pointer-events-none" />
           <input
@@ -78,8 +97,11 @@ export const TopBar: React.FC<TopBarProps> = ({
         </div>
       </div>
 
-      {/* Right Actions */}
-      <div className="flex items-center gap-1.5 no-drag">
+      {/* Right Actions (interactive, stop propagation) */}
+      <div
+        className="flex items-center gap-1.5"
+        onMouseDown={(e) => e.stopPropagation()}
+      >
         <button
           onClick={handleToggleDigest}
           className={`h-7 px-2.5 flex items-center gap-1.5 rounded-md text-[12px] font-medium transition-all ${

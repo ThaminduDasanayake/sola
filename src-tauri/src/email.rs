@@ -19,25 +19,31 @@ fn categorize_email(sender: &str, subject: &str) -> String {
     let lower_sender = sender.to_lowercase();
     let lower_subj = subject.to_lowercase();
 
+    if lower_sender.contains("linkedin")
+        || lower_sender.contains("twitter")
+        || lower_sender.contains("facebook")
+        || lower_sender.contains("instagram")
+    {
+        return "Social".to_string();
+    }
+
     if lower_sender.contains("github")
         || lower_sender.contains("vercel")
         || lower_sender.contains("neon")
         || lower_sender.contains("gitlab")
         || lower_sender.contains("aws")
         || lower_sender.contains("docker")
-    {
-        return "Dev".to_string();
-    }
-
-    if lower_sender.contains("stripe")
+        || lower_sender.contains("stripe")
         || lower_sender.contains("invoice")
         || lower_sender.contains("billing")
         || lower_sender.contains("receipt")
         || lower_subj.contains("invoice")
         || lower_subj.contains("receipt")
         || lower_subj.contains("your order")
+        || lower_subj.contains("security alert")
+        || lower_subj.contains("notification")
     {
-        return "Receipt".to_string();
+        return "Updates".to_string();
     }
 
     if lower_sender.contains("newsletter")
@@ -45,11 +51,13 @@ fn categorize_email(sender: &str, subject: &str) -> String {
         || lower_subj.contains("digest")
         || lower_subj.contains("weekly")
         || lower_subj.contains("edition")
+        || lower_subj.contains("sale")
+        || lower_subj.contains("discount")
     {
-        return "Newsletter".to_string();
+        return "Promotions".to_string();
     }
 
-    "Action".to_string()
+    "Primary".to_string()
 }
 
 pub fn fetch_account_emails(
@@ -74,53 +82,37 @@ pub fn fetch_account_emails(
         .select("INBOX")
         .map_err(|e| format!("Failed to select INBOX: {}", e))?;
 
-    if mailbox.exists == 0 {
+    let total = mailbox.exists;
+    if total == 0 {
         let _ = session.logout();
         return Ok(Vec::new());
     }
 
-    // Gmail-specific search: Primary & Updates categories, exclude LinkedIn and Social/Promotions
-    // Gmail natively supports the X-GM-RAW IMAP extension query.
-    let search_query = "X-GM-RAW \"(category:primary OR category:updates) -from:linkedin -category:social -category:promotions\"";
-    
-    let messages = match session.uid_search(search_query) {
-        Ok(uid_set) if !uid_set.is_empty() => {
-            let mut uids: Vec<u32> = uid_set.into_iter().collect();
-            uids.sort_unstable();
-            
-            // Take the most recent `limit` emails
-            let target_uids = if uids.len() > limit {
-                &uids[uids.len() - limit..]
-            } else {
-                &uids[..]
-            };
-            
-            let seq = target_uids
-                .iter()
-                .map(|u| u.to_string())
-                .collect::<Vec<_>>()
-                .join(",");
-                
-            session
-                .uid_fetch(&seq, "(RFC822.HEADER BODY[TEXT] FLAGS)")
-                .map_err(|e| format!("Failed to fetch messages by UID: {}", e))?
-        }
-        _ => {
-            // Fallback to standard sequence fetching if X-GM-RAW search fails or is unsupported
-            let total = mailbox.exists;
-            // Fetch more than limit so we can discard LinkedIn / Social in code
-            let fetch_range = (limit * 2).min(100);
-            let start = if total > fetch_range as u32 {
-                total - fetch_range as u32 + 1
-            } else {
-                1
-            };
-            let sequence_set = format!("{}:{}", start, total);
-            session
-                .fetch(&sequence_set, "(RFC822.HEADER BODY[TEXT] FLAGS)")
-                .map_err(|e| format!("Failed to fetch messages: {}", e))?
-        }
+    // Determine the sequence range for the most recent emails across all categories
+    let start = if total > limit as u32 {
+        total - limit as u32 + 1
+    } else {
+        1
     };
+    let sequence_set = format!("{}:{}", start, total);
+
+    // Query Gmail's categories by UID search for accurate classification
+    let primary_uids: std::collections::HashSet<u32> = session
+        .uid_search("X-GM-RAW \"category:primary\"")
+        .unwrap_or_default();
+    let updates_uids: std::collections::HashSet<u32> = session
+        .uid_search("X-GM-RAW \"category:updates\"")
+        .unwrap_or_default();
+    let promo_uids: std::collections::HashSet<u32> = session
+        .uid_search("X-GM-RAW \"category:promotions\"")
+        .unwrap_or_default();
+    let social_uids: std::collections::HashSet<u32> = session
+        .uid_search("X-GM-RAW \"category:social\"")
+        .unwrap_or_default();
+
+    let messages = session
+        .fetch(&sequence_set, "(UID RFC822.HEADER BODY[TEXT] FLAGS)")
+        .map_err(|e| format!("Failed to fetch messages: {}", e))?;
 
     let mut items = Vec::new();
 
@@ -144,17 +136,6 @@ pub fn fetch_account_emails(
             }
         }
 
-        let lower_from = from.to_lowercase();
-        let lower_subj = subject.to_lowercase();
-
-        // Extra safeguard: explicitly filter out LinkedIn and social spam
-        if lower_from.contains("linkedin.com")
-            || lower_from.contains("linkedin")
-            || lower_subj.contains("linkedin")
-        {
-            continue;
-        }
-
         // Get preview snippet from message body
         let body_bytes = msg.text().unwrap_or_default();
         let raw_text = String::from_utf8_lossy(body_bytes);
@@ -175,7 +156,23 @@ pub fn fetch_account_emails(
         };
 
         let is_seen = msg.flags().iter().any(|f| matches!(f, imap::types::Flag::Seen));
-        let category = categorize_email(&from, &subject);
+
+        // Assign category via Gmail UID category search, or fallback to heuristics
+        let category = if let Some(uid) = msg.uid {
+            if primary_uids.contains(&uid) {
+                "Primary".to_string()
+            } else if updates_uids.contains(&uid) {
+                "Updates".to_string()
+            } else if promo_uids.contains(&uid) {
+                "Promotions".to_string()
+            } else if social_uids.contains(&uid) {
+                "Social".to_string()
+            } else {
+                categorize_email(&from, &subject)
+            }
+        } else {
+            categorize_email(&from, &subject)
+        };
 
         items.push(EmailItem {
             id: message_id.clone(),
@@ -189,10 +186,6 @@ pub fn fetch_account_emails(
             received_at: date_str,
             account_email: email.to_string(),
         });
-
-        if items.len() >= limit {
-            break;
-        }
     }
 
     let _ = session.logout();

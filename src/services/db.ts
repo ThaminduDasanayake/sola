@@ -136,6 +136,17 @@ export async function syncGmail(limit?: number): Promise<EmailThread[]> {
     const fetchLimit = limit ?? savedLimit;
     const fetched = await invoke<any[]>('sync_gmail_emails', { limit: fetchLimit });
     if (fetched && fetched.length > 0) {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('sola_last_sync_time', Date.now().toString());
+      }
+      // Normalize dates to ISO-8601 for accurate SQLite sorting
+      fetched.forEach((item) => {
+        if (!isNaN(Date.parse(item.received_at))) {
+          item.received_at = new Date(item.received_at).toISOString();
+        }
+      });
+      // Sort newest first
+      fetched.sort((a, b) => new Date(b.received_at).getTime() - new Date(a.received_at).getTime());
       memoryEmails = fetched;
       const db = await getDb();
       if (db) {

@@ -19,6 +19,7 @@ interface TopBarProps {
   onSyncInbox: () => void;
   isSyncing: boolean;
   activeTab: ActiveTab;
+  lastSyncText?: string;
   accounts?: string[];
   selectedAccount?: string;
   onSelectAccount?: (acc: string) => void;
@@ -33,6 +34,7 @@ export const TopBar: React.FC<TopBarProps> = ({
   onSyncInbox,
   isSyncing,
   activeTab,
+  lastSyncText,
   accounts = [],
   selectedAccount = 'all',
   onSelectAccount,
@@ -60,15 +62,25 @@ export const TopBar: React.FC<TopBarProps> = ({
 
         {activeTab === 'inbox' && (
           <>
-            <button
-              onClick={onSyncInbox}
-              disabled={isSyncing}
-              onMouseDown={(e) => e.stopPropagation()}
-              className="w-7 h-7 rounded-full bg-white/[0.08] border border-white/[0.06] hover:bg-white/[0.14] flex items-center justify-center text-white/90 transition-colors shadow-sm disabled:opacity-50"
-              title="Sync Inbox"
-            >
-              <ArrowsClockwiseIcon className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-[#e5a93c]' : ''}`} />
-            </button>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                onClick={onSyncInbox}
+                disabled={isSyncing}
+                onMouseDown={(e) => e.stopPropagation()}
+                className="w-7 h-7 rounded-full bg-white/[0.08] border border-white/[0.06] hover:bg-white/[0.14] flex items-center justify-center text-white/90 transition-colors shadow-sm disabled:opacity-50"
+                title={`Sync Inbox (${isSyncing ? 'Syncing...' : `Last: ${lastSyncText || 'Never'}`})`}
+              >
+                <ArrowsClockwiseIcon className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-[#e5a93c]' : ''}`} />
+              </button>
+              {lastSyncText && (
+                <span
+                  className="text-[11px] font-mono text-[#8e8e93] select-none hidden sm:inline-block pr-1"
+                  title={`Last synced: ${lastSyncText}`}
+                >
+                  {isSyncing ? 'Syncing...' : lastSyncText}
+                </span>
+              )}
+            </div>
 
             {/* User Account Switcher */}
             <div className="relative" onMouseDown={(e) => e.stopPropagation()}>

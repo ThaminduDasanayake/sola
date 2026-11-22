@@ -8,8 +8,9 @@ import { PulseFeed } from './components/pulse-feed';
 import { DetailPane } from './components/detail-pane';
 import { QuickAddModal } from './components/quick-add-modal';
 import { SettingsPage } from './components/settings-page';
-import { fetchBookmarks, fetchEmails, fetchProjects, addBookmark, syncGmail } from './services/db';
-import type { Bookmark, EmailThread, ProjectTelemetry, ActiveTab } from './types';
+import { fetchBookmarks, fetchEmails, fetchProjects, addBookmark } from './services/db';
+import { syncManager } from './services/sync-manager';
+import type { Bookmark, EmailThread, ProjectTelemetry, ActiveTab, EmailCategoryTab } from './types';
 
 export function App() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('inbox');
@@ -18,6 +19,7 @@ export function App() {
   const [emails, setEmails] = useState<EmailThread[]>([]);
   const [projects, setProjects] = useState<ProjectTelemetry[]>([]);
   const [selectedAccount, setSelectedAccount] = useState<string>('all');
+  const [categoryTab, setCategoryTab] = useState<EmailCategoryTab>('Primary');
 
   const [selectedBookmark, setSelectedBookmark] = useState<Bookmark | null>(null);
   const [selectedEmail, setSelectedEmail] = useState<EmailThread | null>(null);
@@ -27,22 +29,43 @@ export function App() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
+  const [lastSyncText, setLastSyncText] = useState<string>(syncManager.formatRelativeLastSync());
 
   const handleSync = async () => {
-    setIsSyncing(true);
     setSyncError(null);
     try {
-      const updated = await syncGmail();
-      setEmails(updated);
+      const updated = await syncManager.triggerSync();
       if (updated.length > 0) {
+        setEmails(updated);
         setSelectedEmail(updated[0]);
       }
     } catch (err: any) {
       setSyncError(typeof err === 'string' ? err : err?.message || 'Sync failed. Check .env');
-    } finally {
-      setIsSyncing(false);
     }
   };
+
+  useEffect(() => {
+    syncManager.init((updatedEmails) => {
+      setEmails(updatedEmails);
+      if (updatedEmails.length > 0 && !selectedEmail) {
+        setSelectedEmail(updatedEmails[0]);
+      }
+    });
+
+    const unsubscribe = syncManager.subscribe((syncing) => {
+      setIsSyncing(syncing);
+      setLastSyncText(syncManager.formatRelativeLastSync());
+    });
+
+    const interval = setInterval(() => {
+      setLastSyncText(syncManager.formatRelativeLastSync());
+    }, 30000);
+
+    return () => {
+      unsubscribe();
+      clearInterval(interval);
+    };
+  }, []);
 
   useEffect(() => {
     async function loadData() {
@@ -59,6 +82,13 @@ export function App() {
       if (bList.length > 0 && !selectedBookmark) setSelectedBookmark(bList[0]);
       if (eList.length > 0 && !selectedEmail) setSelectedEmail(eList[0]);
       if (pList.length > 0 && !selectedProject) setSelectedProject(pList[0]);
+
+      // If local emails are empty, run an automatic initial sync in the background
+      if (eList.length === 0) {
+        syncManager.triggerSync().catch((err) => {
+          console.warn('Initial background sync error:', err);
+        });
+      }
     }
 
     loadData();
@@ -128,17 +158,26 @@ export function App() {
     return emails.filter((e) => e.account_email === selectedAccount);
   }, [emails, selectedAccount]);
 
+  const displayedCategoryEmails = useMemo(() => {
+    const isPrimary = (e: EmailThread) => e.category === 'Primary' || e.category === 'Action';
+    const isUpdates = (e: EmailThread) => e.category === 'Updates' || e.category === 'Dev' || e.category === 'Receipt';
+
+    if (categoryTab === 'Primary') return filteredEmails.filter(isPrimary);
+    if (categoryTab === 'Updates') return filteredEmails.filter(isUpdates);
+    return filteredEmails;
+  }, [filteredEmails, categoryTab]);
+
   useEffect(() => {
-    if (filteredEmails.length > 0) {
-      if (!selectedEmail || !filteredEmails.some((e) => e.id === selectedEmail.id)) {
-        setSelectedEmail(filteredEmails[0]);
+    if (displayedCategoryEmails.length > 0) {
+      if (!selectedEmail || !displayedCategoryEmails.some((e) => e.id === selectedEmail.id)) {
+        setSelectedEmail(displayedCategoryEmails[0]);
       }
     } else {
       setSelectedEmail(null);
     }
-  }, [selectedAccount, filteredEmails]);
+  }, [selectedAccount, categoryTab, displayedCategoryEmails]);
 
-  const unreadCount = emailCountsByAccount[selectedAccount]?.unread ?? 0;
+  const unreadCount = displayedCategoryEmails.filter((e) => !e.is_read).length;
 
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-[#18181a] text-[#f5f5f7]">
@@ -151,6 +190,7 @@ export function App() {
         onSyncInbox={handleSync}
         isSyncing={isSyncing}
         activeTab={activeTab}
+        lastSyncText={lastSyncText}
         accounts={accounts}
         selectedAccount={selectedAccount}
         onSelectAccount={setSelectedAccount}
@@ -194,6 +234,10 @@ export function App() {
                   selectedAccount={selectedAccount}
                   accounts={accounts}
                   onSelectAccount={setSelectedAccount}
+                  lastSyncText={lastSyncText}
+                  isSyncing={isSyncing}
+                  categoryTab={categoryTab}
+                  onCategoryChange={setCategoryTab}
                 />
               )}
 

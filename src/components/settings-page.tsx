@@ -9,8 +9,10 @@ import {
   ArrowsClockwise as ArrowsClockwiseIcon,
   Info as InfoIcon,
   ArrowLeft as ArrowLeftIcon,
+  Clock as ClockIcon,
 } from '@phosphor-icons/react';
 import { ttsService } from '../services/tts';
+import { syncManager } from '../services/sync-manager';
 
 interface SettingsPageProps {
   onBack?: () => void;
@@ -376,19 +378,42 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
               <div className="bg-[#1c1c1e] rounded-2xl border border-white/[0.06] p-5 space-y-5">
                 <div>
                   <span className="text-[13px] font-medium text-[#f5f5f7] block mb-1">
-                    Categories & Filtering
+                    Automated Morning Schedule
+                  </span>
+                  <div className="flex items-center justify-between p-3.5 rounded-xl bg-white/[0.03] border border-white/[0.04]">
+                    <div className="flex items-start gap-3">
+                      <ClockIcon className="w-4 h-4 text-[#e5a93c] shrink-0 mt-0.5" />
+                      <div>
+                        <span className="text-[12.5px] font-medium text-[#f5f5f7]">
+                          Daily 5:30 AM Auto-Sync
+                        </span>
+                        <p className="text-[11.5px] text-[#8e8e93] mt-0.5">
+                          Automatically pulls fresh emails every morning at 5:30 AM before your day starts.
+                        </p>
+                      </div>
+                    </div>
+                    <span className="text-[11px] font-medium text-[#30d158] bg-[#30d158]/10 px-2.5 py-1 rounded-full border border-[#30d158]/20 shrink-0 flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#30d158] animate-pulse" />
+                      <span>Active</span>
+                    </span>
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-white/[0.06]">
+                  <span className="text-[13px] font-medium text-[#f5f5f7] block mb-1">
+                    Inbox Category Tabs
                   </span>
                   <div className="flex items-center justify-between p-3 rounded-xl bg-white/[0.03] border border-white/[0.04]">
                     <div>
                       <span className="text-[12.5px] font-medium text-[#f5f5f7]">
-                        Primary & Updates Categories
+                        Category Separation
                       </span>
                       <p className="text-[11.5px] text-[#8e8e93] mt-0.5">
-                        Automatically filters out Social, Promotions, Forums, and LinkedIn clutter.
+                        Fetches all mail and organizes into Primary, Updates, and All Mail tabs.
                       </p>
                     </div>
                     <span className="text-[11px] font-medium text-[#e5a93c] bg-[#e5a93c]/10 px-2.5 py-1 rounded-full border border-[#e5a93c]/20 shrink-0">
-                      Active Filter
+                      Primary Default
                     </span>
                   </div>
                 </div>
@@ -431,7 +456,13 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                 </div>
 
                 {onSyncInbox && (
-                  <div className="pt-4 border-t border-white/[0.06] flex justify-end">
+                  <div className="pt-4 border-t border-white/[0.06] flex items-center justify-between">
+                    <span className="text-[12px] text-[#8e8e93]">
+                      Last synced:{' '}
+                      <strong className="text-[#f5f5f7] font-medium font-mono">
+                        {syncManager.formatRelativeLastSync()}
+                      </strong>
+                    </span>
                     <button
                       onClick={onSyncInbox}
                       disabled={isSyncing}

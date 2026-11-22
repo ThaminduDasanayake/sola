@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { UserCircle as UserCircleIcon } from '@phosphor-icons/react';
-import type { EmailThread } from '../types';
+import type { EmailThread, EmailCategoryTab } from '../types';
 
 interface InboxFeedProps {
   emails: EmailThread[];
@@ -9,6 +9,10 @@ interface InboxFeedProps {
   selectedAccount?: string;
   accounts?: string[];
   onSelectAccount?: (acc: string) => void;
+  lastSyncText?: string;
+  isSyncing?: boolean;
+  categoryTab?: EmailCategoryTab;
+  onCategoryChange?: (tab: EmailCategoryTab) => void;
 }
 
 export const InboxFeed: React.FC<InboxFeedProps> = ({
@@ -18,44 +22,123 @@ export const InboxFeed: React.FC<InboxFeedProps> = ({
   selectedAccount = 'all',
   accounts = [],
   onSelectAccount,
+  lastSyncText,
+  isSyncing = false,
+  categoryTab = 'Primary',
+  onCategoryChange,
 }) => {
+  // Categorize emails (supports both Gmail categories and legacy tags)
+  const isPrimary = (e: EmailThread) =>
+    e.category === 'Primary' || e.category === 'Action';
+  const isUpdates = (e: EmailThread) =>
+    e.category === 'Updates' || e.category === 'Dev' || e.category === 'Receipt';
+
+  const primaryEmails = useMemo(() => emails.filter(isPrimary), [emails]);
+  const updatesEmails = useMemo(() => emails.filter(isUpdates), [emails]);
+  const allEmails = emails;
+
+  const displayedEmails = useMemo(() => {
+    if (categoryTab === 'Primary') return primaryEmails;
+    if (categoryTab === 'Updates') return updatesEmails;
+    return allEmails;
+  }, [categoryTab, primaryEmails, updatesEmails, allEmails]);
+
+  const primaryUnread = primaryEmails.filter((e) => !e.is_read).length;
+  const updatesUnread = updatesEmails.filter((e) => !e.is_read).length;
+
   return (
-    <div className="flex-1 flex flex-col overflow-hidden">
-      {/* Subheader: Active Account Context */}
-      <div className="h-8 px-3.5 border-b border-white/[0.06] flex items-center justify-between text-[11px] shrink-0 bg-[#161618]">
+    <div className="flex-1 flex flex-col overflow-hidden bg-[#18181a]">
+      {/* Subheader: Active Account Context & Last Sync */}
+      <div className="h-8 px-3 border-b border-white/[0.06] flex items-center justify-between text-[11px] shrink-0 bg-[#161618]">
         <div className="flex items-center gap-1.5 min-w-0">
           <UserCircleIcon className="w-3.5 h-3.5 text-[#e5a93c] shrink-0" weight="fill" />
-          <span className="font-medium text-[#f5f5f7] truncate">
+          <span className="font-medium text-[#f5f5f7] truncate max-w-[110px]">
             {selectedAccount === 'all' ? 'All Inboxes' : selectedAccount}
           </span>
         </div>
-        <span className="text-[#8e8e93] shrink-0 text-[10.5px] font-mono">
-          {emails.length} {emails.length === 1 ? 'message' : 'messages'}
-        </span>
+        <div className="flex items-center gap-1.5 text-[#8e8e93] shrink-0 text-[10px] font-mono">
+          <span>{displayedEmails.length} {displayedEmails.length === 1 ? 'msg' : 'msgs'}</span>
+          {lastSyncText && (
+            <>
+              <span className="text-white/20">•</span>
+              <span>{isSyncing ? 'Syncing...' : lastSyncText}</span>
+            </>
+          )}
+        </div>
       </div>
 
-      {emails.length === 0 ? (
+      {/* Category Tabs: Primary (Default), Updates (2nd Tab), All Mail */}
+      <div className="px-2 pt-2 pb-1.5 shrink-0 bg-[#161618] border-b border-white/[0.04]">
+        <div className="p-0.5 bg-[#202023] rounded-full border border-white/[0.06] flex items-center">
+          <button
+            onClick={() => onCategoryChange?.('Primary')}
+            className={`flex-1 py-1 px-1.5 rounded-full text-[11px] transition-all flex items-center justify-center gap-1 ${
+              categoryTab === 'Primary'
+                ? 'bg-white/[0.14] text-[#f5f5f7] shadow-sm font-semibold'
+                : 'text-[#8e8e93] hover:text-[#d1d1d6]'
+            }`}
+          >
+            <span>Primary</span>
+            {primaryUnread > 0 ? (
+              <span className="w-1.5 h-1.5 rounded-full bg-[#e5a93c]" />
+            ) : (
+              <span className="text-[9.5px] text-[#636366] font-mono">({primaryEmails.length})</span>
+            )}
+          </button>
+
+          <button
+            onClick={() => onCategoryChange?.('Updates')}
+            className={`flex-1 py-1 px-1.5 rounded-full text-[11px] transition-all flex items-center justify-center gap-1 ${
+              categoryTab === 'Updates'
+                ? 'bg-white/[0.14] text-[#f5f5f7] shadow-sm font-semibold'
+                : 'text-[#8e8e93] hover:text-[#d1d1d6]'
+            }`}
+          >
+            <span>Updates</span>
+            {updatesUnread > 0 ? (
+              <span className="w-1.5 h-1.5 rounded-full bg-[#e5a93c]" />
+            ) : (
+              <span className="text-[9.5px] text-[#636366] font-mono">({updatesEmails.length})</span>
+            )}
+          </button>
+
+          <button
+            onClick={() => onCategoryChange?.('All')}
+            className={`flex-1 py-1 px-1.5 rounded-full text-[11px] transition-all flex items-center justify-center gap-1 ${
+              categoryTab === 'All'
+                ? 'bg-white/[0.14] text-[#f5f5f7] shadow-sm font-semibold'
+                : 'text-[#8e8e93] hover:text-[#d1d1d6]'
+            }`}
+          >
+            <span>All Mail</span>
+            <span className="text-[9.5px] text-[#636366] font-mono">({allEmails.length})</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Messages Feed */}
+      {displayedEmails.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center p-8 text-center select-none">
-          <p className="text-[14px] font-medium text-[#d1d1d6]">
-            {selectedAccount === 'all' ? 'No Messages' : 'No Messages in this Account'}
+          <p className="text-[13.5px] font-medium text-[#d1d1d6]">
+            No {categoryTab === 'All' ? '' : categoryTab} Messages
           </p>
-          <p className="text-[12px] text-[#636366] mt-1 max-w-[200px]">
-            {selectedAccount === 'all'
+          <p className="text-[11.5px] text-[#636366] mt-1 max-w-[200px] leading-relaxed">
+            {emails.length === 0
               ? 'Click ↻ in the toolbar to sync your Gmail'
-              : 'Switch to All Inboxes or another user to see more'}
+              : `Switch to ${categoryTab === 'Primary' ? 'Updates or All Mail' : 'Primary'} to view other messages`}
           </p>
-          {selectedAccount !== 'all' && (
+          {categoryTab !== 'All' && emails.length > 0 && (
             <button
-              onClick={() => onSelectAccount?.('all')}
-              className="mt-3 px-3 py-1 rounded-full text-[11.5px] font-medium bg-white/[0.08] hover:bg-white/[0.14] text-[#e5a93c] transition-colors"
+              onClick={() => onCategoryChange?.('All')}
+              className="mt-3 px-3 py-1 rounded-full text-[11px] font-medium bg-white/[0.08] hover:bg-white/[0.14] text-[#e5a93c] transition-colors"
             >
-              View All Inboxes
+              View All Mail ({emails.length})
             </button>
           )}
         </div>
       ) : (
         <div className="flex-1 overflow-y-auto p-1.5 space-y-0.5">
-          {emails.map((item) => {
+          {displayedEmails.map((item) => {
             const isSelected = item.id === selectedId;
             const senderName = item.sender.split('<')[0].trim();
             const accountLabel = item.account_email ? item.account_email.split('@')[0] : null;
@@ -85,10 +168,16 @@ export const InboxFeed: React.FC<InboxFeedProps> = ({
                     {/* Account badge when viewing All Inboxes with multiple accounts */}
                     {selectedAccount === 'all' && accounts.length > 1 && accountLabel && (
                       <span
-                        className="text-[9.5px] font-medium px-1.5 py-0.2 rounded-full bg-white/[0.08] text-[#8e8e93] shrink-0 truncate max-w-[80px]"
+                        className="text-[9.5px] font-medium px-1.5 py-0.2 rounded-full bg-white/[0.08] text-[#8e8e93] shrink-0 truncate max-w-[70px]"
                         title={`Account: ${item.account_email}`}
                       >
                         {accountLabel}
+                      </span>
+                    )}
+                    {/* Category tag when viewing All Mail */}
+                    {categoryTab === 'All' && item.category && (
+                      <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-white/[0.06] text-[#8e8e93] shrink-0 font-medium">
+                        {item.category}
                       </span>
                     )}
                   </div>

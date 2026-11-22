@@ -14,14 +14,15 @@ export const InboxFeed: React.FC<InboxFeedProps> = ({
 }) => {
   if (emails.length === 0) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-[#86868b]">
-        <p className="text-[13px]">No messages</p>
+      <div className="flex-1 flex flex-col items-center justify-center p-8 text-center select-none">
+        <p className="text-[14px] font-medium text-[#d1d1d6]">No Messages</p>
+        <p className="text-[12px] text-[#636366] mt-1">Click ↻ in the toolbar to sync your Gmail</p>
       </div>
     );
   }
 
   return (
-    <div className="flex-1 overflow-y-auto px-2 py-1.5 space-y-1">
+    <div className="flex-1 overflow-y-auto p-1.5 space-y-0.5">
       {emails.map((item) => {
         const isSelected = item.id === selectedId;
         const senderName = item.sender.split('<')[0].trim();
@@ -30,30 +31,26 @@ export const InboxFeed: React.FC<InboxFeedProps> = ({
           <div
             key={item.id}
             onClick={() => onSelect(item)}
-            className={`px-3 py-2.5 rounded-lg cursor-pointer transition-all ${
+            className={`px-3 py-2.5 rounded-xl cursor-pointer transition-colors ${
               isSelected
-                ? 'bg-[#2a2417] border border-amber-500/35 shadow-sm'
-                : 'hover:bg-white/[0.04] border border-transparent'
+                ? 'bg-white/[0.12] text-[#f5f5f7]'
+                : 'hover:bg-white/[0.05] text-[#d1d1d6]'
             }`}
           >
-            <div className="flex items-center justify-between gap-2 mb-1">
+            <div className="flex items-center justify-between gap-2 mb-0.5">
               <div className="flex items-center gap-1.5 truncate">
                 {!item.is_read && (
-                  <span className="w-2 h-2 rounded-full bg-[#f59e0b] shrink-0 shadow-[0_0_6px_rgba(245,158,11,0.5)]" />
+                  <span className="w-2 h-2 rounded-full bg-[#e5a93c] shrink-0" />
                 )}
                 <span
                   className={`text-[12px] font-semibold truncate ${
-                    isSelected ? 'text-amber-300' : 'text-[#f0f0f3]'
+                    isSelected ? 'text-[#f5f5f7]' : 'text-[#f0f0f3]'
                   }`}
                 >
                   {senderName}
                 </span>
               </div>
-              <span
-                className={`text-[11px] shrink-0 ${
-                  isSelected ? 'text-amber-300/80' : 'text-[#86868b]'
-                }`}
-              >
+              <span className="text-[11px] shrink-0 text-[#8e8e93]">
                 {new Date(item.received_at).toLocaleTimeString([], {
                   hour: '2-digit',
                   minute: '2-digit',
@@ -61,19 +58,11 @@ export const InboxFeed: React.FC<InboxFeedProps> = ({
               </span>
             </div>
 
-            <h3
-              className={`text-[13px] font-medium line-clamp-1 leading-snug ${
-                isSelected ? 'text-[#fbfbfb] font-semibold' : 'text-[#f0f0f3]'
-              }`}
-            >
+            <h3 className="text-[13px] font-medium line-clamp-1 leading-snug text-[#f5f5f7]">
               {item.subject}
             </h3>
 
-            <p
-              className={`text-[12px] line-clamp-2 mt-1 leading-normal ${
-                isSelected ? 'text-[#d6d6dc]' : 'text-[#9e9ea7]'
-              }`}
-            >
+            <p className="text-[12px] line-clamp-2 mt-0.5 leading-normal text-[#8e8e93]">
               {item.ai_summary || item.snippet}
             </p>
           </div>

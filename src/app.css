@@ -31,6 +31,19 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Allow text selection in readable content panes */
+.select-text,
+.select-text * {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+}
+
+/* Native gold selection styling */
+::selection {
+  background-color: rgba(229, 169, 60, 0.35);
+  color: #ffffff;
+}
+
 /* Clickable items cursor pointer */
 button:not(:disabled),
 [role="button"]:not([aria-disabled="true"]),

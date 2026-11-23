@@ -11,6 +11,7 @@ import { SettingsPage } from './components/settings-page';
 import { fetchBookmarks, fetchEmails, fetchProjects, addBookmark, deleteEmails } from './services/db';
 import { DeleteConfirmDialog } from './components/delete-confirm-dialog';
 import { syncManager } from './services/sync-manager';
+import { vercelService } from './services/vercel';
 import type { Bookmark, EmailThread, ProjectTelemetry, ActiveTab, EmailCategoryTab } from './types';
 
 export function App() {
@@ -19,12 +20,48 @@ export function App() {
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
   const [emails, setEmails] = useState<EmailThread[]>([]);
   const [projects, setProjects] = useState<ProjectTelemetry[]>([]);
-  const [selectedAccount, setSelectedAccount] = useState<string>('all');
-  const [categoryTab, setCategoryTab] = useState<EmailCategoryTab>('Primary');
+  const [selectedAccount, setSelectedAccount] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('sola_selected_account') || 'all';
+    }
+    return 'all';
+  });
+  const [categoryTab, setCategoryTab] = useState<EmailCategoryTab>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('sola_category_tab');
+      if (saved === 'Primary' || saved === 'Updates' || saved === 'All') return saved;
+    }
+    return 'Primary';
+  });
 
   const [selectedBookmark, setSelectedBookmark] = useState<Bookmark | null>(null);
   const [selectedEmail, setSelectedEmail] = useState<EmailThread | null>(null);
   const [selectedProject, setSelectedProject] = useState<ProjectTelemetry | null>(null);
+
+  const handleSelectEmail = (email: EmailThread | null) => {
+    setSelectedEmail(email);
+    if (typeof window !== 'undefined') {
+      if (email) {
+        localStorage.setItem('sola_selected_email_id', email.id);
+      } else {
+        localStorage.removeItem('sola_selected_email_id');
+      }
+    }
+  };
+
+  const handleCategoryChange = (tab: EmailCategoryTab) => {
+    setCategoryTab(tab);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('sola_category_tab', tab);
+    }
+  };
+
+  const handleSelectAccount = (acc: string) => {
+    setSelectedAccount(acc);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('sola_selected_account', acc);
+    }
+  };
 
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => {
@@ -37,13 +74,50 @@ export function App() {
   const [syncError, setSyncError] = useState<string | null>(null);
   const [lastSyncText, setLastSyncText] = useState<string>(syncManager.formatRelativeLastSync());
 
+  // Vercel Telemetry Sync State
+  const [isSyncingVercel, setIsSyncingVercel] = useState(false);
+  const [vercelSyncError, setVercelSyncError] = useState<string | null>(null);
+
+  const handleSyncVercel = async () => {
+    setIsSyncingVercel(true);
+    setVercelSyncError(null);
+    try {
+      const res = await vercelService.syncProjects();
+      if (res.success) {
+        setProjects(res.projects);
+        setSelectedProject((prev) => {
+          if (prev && res.projects.some((p) => p.id === prev.id)) {
+            return res.projects.find((p) => p.id === prev.id) || prev;
+          }
+          return res.projects[0] || null;
+        });
+      } else if (res.error) {
+        setVercelSyncError(res.error);
+      }
+    } catch (err: any) {
+      setVercelSyncError(err.message || 'Failed to sync Vercel projects');
+    } finally {
+      setIsSyncingVercel(false);
+    }
+  };
+
   const handleSync = async () => {
     setSyncError(null);
     try {
       const updated = await syncManager.triggerSync();
       if (updated.length > 0) {
         setEmails(updated);
-        setSelectedEmail(updated[0]);
+        setSelectedEmail((prev) => {
+          if (prev && updated.some((e) => e.id === prev.id)) {
+            return updated.find((e) => e.id === prev.id) || prev;
+          }
+          const savedId = typeof window !== 'undefined' ? localStorage.getItem('sola_selected_email_id') : null;
+          const target = (savedId && updated.find((e) => e.id === savedId)) || updated[0];
+          if (typeof window !== 'undefined' && target) {
+            localStorage.setItem('sola_selected_email_id', target.id);
+          }
+          return target;
+        });
       }
     } catch (err: any) {
       setSyncError(typeof err === 'string' ? err : err?.message || 'Sync failed. Check .env');
@@ -53,9 +127,17 @@ export function App() {
   useEffect(() => {
     syncManager.init((updatedEmails) => {
       setEmails(updatedEmails);
-      if (updatedEmails.length > 0 && !selectedEmail) {
-        setSelectedEmail(updatedEmails[0]);
-      }
+      setSelectedEmail((prev) => {
+        if (prev && updatedEmails.some((e) => e.id === prev.id)) {
+          return updatedEmails.find((e) => e.id === prev.id) || prev;
+        }
+        const savedId = typeof window !== 'undefined' ? localStorage.getItem('sola_selected_email_id') : null;
+        const target = (savedId && updatedEmails.find((e) => e.id === savedId)) || updatedEmails[0] || null;
+        if (typeof window !== 'undefined' && target) {
+          localStorage.setItem('sola_selected_email_id', target.id);
+        }
+        return target;
+      });
     });
 
     const unsubscribe = syncManager.subscribe((syncing) => {
@@ -86,14 +168,32 @@ export function App() {
       setProjects(pList);
 
       if (bList.length > 0 && !selectedBookmark) setSelectedBookmark(bList[0]);
-      if (eList.length > 0 && !selectedEmail) setSelectedEmail(eList[0]);
+      if (eList.length > 0) {
+        const savedId = typeof window !== 'undefined' ? localStorage.getItem('sola_selected_email_id') : null;
+        const target = (savedId && eList.find((e) => e.id === savedId)) || eList[0];
+        setSelectedEmail(target);
+      }
       if (pList.length > 0 && !selectedProject) setSelectedProject(pList[0]);
 
-      // If local emails are empty, run an automatic initial sync in the background
-      if (eList.length === 0) {
+      // If local emails are empty OR they were saved with the legacy schema (missing body_html / containing raw MIME headers),
+      // trigger an automatic background sync to upgrade all saved emails to rich HTML!
+      const hasLegacyFormat = eList.some(
+        (e) => !e.body_html || e.snippet.includes('Content-Type:')
+      );
+      if (eList.length === 0 || (hasLegacyFormat && typeof navigator !== 'undefined' && navigator.onLine)) {
         syncManager.triggerSync().catch((err) => {
-          console.warn('Initial background sync error:', err);
+          console.warn('Auto background upgrade sync error:', err);
         });
+      }
+
+      // If local projects are empty and we're online, attempt background Vercel sync
+      if (pList.length === 0 && typeof navigator !== 'undefined' && navigator.onLine) {
+        vercelService.syncProjects().then((res) => {
+          if (res.success && res.projects.length > 0) {
+            setProjects(res.projects);
+            setSelectedProject((prev) => prev || res.projects[0]);
+          }
+        }).catch(() => {});
       }
     }
 
@@ -149,6 +249,20 @@ export function App() {
     });
   };
 
+  const backfillTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const triggerDebouncedBackfill = () => {
+    if (typeof navigator !== 'undefined' && !navigator.onLine) return;
+    if (backfillTimeoutRef.current) {
+      clearTimeout(backfillTimeoutRef.current);
+    }
+    backfillTimeoutRef.current = setTimeout(() => {
+      syncManager.triggerSync().catch((err) => {
+        console.warn('Backfill sync error:', err);
+      });
+    }, 1500);
+  };
+
   const handleConfirmDelete = async () => {
     if (!deleteConfirm || deleteConfirm.ids.length === 0) return;
     setIsDeletingEmail(true);
@@ -158,13 +272,12 @@ export function App() {
       setEmails((prev) => prev.filter((e) => !idSet.has(e.id)));
       if (selectedEmail && idSet.has(selectedEmail.id)) {
         const remaining = displayedCategoryEmails.filter((e) => !idSet.has(e.id));
-        setSelectedEmail(remaining[0] ?? null);
+        const nextSelected = remaining[0] ?? null;
+        handleSelectEmail(nextSelected);
       }
       await deleteEmails(ids);
       setDeleteConfirm(null);
-      syncManager.triggerSync().catch((err) => {
-        console.warn('Backfill sync error:', err);
-      });
+      triggerDebouncedBackfill();
     } finally {
       setIsDeletingEmail(false);
     }
@@ -212,7 +325,13 @@ export function App() {
   useEffect(() => {
     if (displayedCategoryEmails.length > 0) {
       if (!selectedEmail || !displayedCategoryEmails.some((e) => e.id === selectedEmail.id)) {
-        setSelectedEmail(displayedCategoryEmails[0]);
+        const savedId = typeof window !== 'undefined' ? localStorage.getItem('sola_selected_email_id') : null;
+        const matchingSaved = savedId ? displayedCategoryEmails.find((e) => e.id === savedId) : null;
+        const next = matchingSaved || displayedCategoryEmails[0];
+        setSelectedEmail(next);
+        if (typeof window !== 'undefined' && next) {
+          localStorage.setItem('sola_selected_email_id', next.id);
+        }
       }
     } else {
       setSelectedEmail(null);
@@ -245,7 +364,7 @@ export function App() {
         lastSyncText={lastSyncText}
         accounts={accounts}
         selectedAccount={selectedAccount}
-        onSelectAccount={setSelectedAccount}
+        onSelectAccount={handleSelectAccount}
         emailCountsByAccount={emailCountsByAccount}
       />
 
@@ -267,6 +386,8 @@ export function App() {
             onBack={() => setActiveTab('inbox')}
             onSyncInbox={handleSync}
             isSyncing={isSyncing}
+            onSyncVercel={handleSyncVercel}
+            isSyncingVercel={isSyncingVercel}
           />
         ) : (
           <>
@@ -282,14 +403,14 @@ export function App() {
                 <InboxFeed
                   emails={filteredEmails}
                   selectedId={selectedEmail?.id ?? null}
-                  onSelect={setSelectedEmail}
+                  onSelect={handleSelectEmail}
                   selectedAccount={selectedAccount}
                   accounts={accounts}
-                  onSelectAccount={setSelectedAccount}
+                  onSelectAccount={handleSelectAccount}
                   lastSyncText={lastSyncText}
                   isSyncing={isSyncing}
                   categoryTab={categoryTab}
-                  onCategoryChange={setCategoryTab}
+                  onCategoryChange={handleCategoryChange}
                   onDeleteEmail={requestDeleteEmails}
                   onDeleteEmails={requestDeleteEmails}
                 />
@@ -308,6 +429,10 @@ export function App() {
                   projects={projects}
                   selectedId={selectedProject?.id ?? null}
                   onSelect={setSelectedProject}
+                  onSyncVercel={handleSyncVercel}
+                  isSyncing={isSyncingVercel}
+                  onOpenSettings={() => setActiveTab('settings')}
+                  syncError={vercelSyncError}
                 />
               )}
             </div>

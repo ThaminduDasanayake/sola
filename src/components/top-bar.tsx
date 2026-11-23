@@ -86,7 +86,7 @@ export const TopBar: React.FC<TopBarProps> = ({
             <div className="relative" onMouseDown={(e) => e.stopPropagation()}>
               <button
                 onClick={() => setIsAccountMenuOpen((prev) => !prev)}
-                className={`h-7 px-2.5 rounded-full border flex items-center gap-1.5 text-[12px] font-medium transition-all shadow-sm ${
+                className={`h-7 px-2.5 rounded-full border flex items-center gap-1.5 text-[12px] font-medium transition-all shadow-sm cursor-pointer ${
                   selectedAccount !== 'all'
                     ? 'bg-[#e5a93c]/20 border-[#e5a93c]/50 text-white'
                     : 'bg-white/[0.08] border-white/[0.06] hover:bg-white/[0.14] text-white/90'
@@ -97,10 +97,10 @@ export const TopBar: React.FC<TopBarProps> = ({
                   className={`w-3.5 h-3.5 ${selectedAccount !== 'all' ? 'text-[#e5a93c]' : 'text-[#8e8e93]'}`}
                   weight={selectedAccount !== 'all' ? 'fill' : 'regular'}
                 />
-                <span className="max-w-[110px] truncate text-[11px]">
+                <span className="text-[11px] whitespace-nowrap">
                   {selectedAccount === 'all'
                     ? 'All Inboxes'
-                    : selectedAccount.split('@')[0]}
+                    : selectedAccount}
                 </span>
                 <CaretDownIcon className="w-2.5 h-2.5 text-[#8e8e93]" />
               </button>
@@ -111,7 +111,7 @@ export const TopBar: React.FC<TopBarProps> = ({
                     className="fixed inset-0 z-40"
                     onClick={() => setIsAccountMenuOpen(false)}
                   />
-                  <div className="absolute left-0 mt-1.5 w-64 bg-[#222224] border border-white/10 rounded-xl shadow-2xl p-1 z-50 animate-in fade-in zoom-in-95 duration-100">
+                  <div className="absolute left-0 mt-1.5 min-w-[260px] max-w-xs bg-[#222224] border border-white/10 rounded-xl shadow-2xl p-1 z-50 animate-in fade-in zoom-in-95 duration-100">
                     <div className="px-2.5 py-1.5 text-[10px] font-semibold text-[#8e8e93] uppercase tracking-wider">
                       Switch Mailbox
                     </div>

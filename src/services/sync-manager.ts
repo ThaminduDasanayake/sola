@@ -16,6 +16,23 @@ class SyncManager {
       if (saved) {
         this.lastSyncTime = parseInt(saved, 10);
       }
+
+      window.addEventListener('online', () => {
+        console.info('Internet connection restored. Scheduling auto-sync in 2.5s...');
+        this.notify();
+        setTimeout(() => {
+          if (navigator.onLine) {
+            this.triggerSync().catch((err) => {
+              console.warn('Auto-sync upon reconnection failed:', err);
+            });
+          }
+        }, 2500);
+      });
+
+      window.addEventListener('offline', () => {
+        console.info('Device is now offline.');
+        this.notify();
+      });
     }
   }
 
@@ -49,14 +66,21 @@ class SyncManager {
 
   async triggerSync(limit?: number): Promise<EmailThread[]> {
     if (this.isSyncing) return [];
+
+    // If offline, don't trigger IMAP network calls
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      console.info('Device is offline. Skipping IMAP sync.');
+      return [];
+    }
+
     this.isSyncing = true;
     this.notify();
 
     try {
       const emails = await syncGmail(limit);
-      this.lastSyncTime = Date.now();
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('sola_last_sync_time', this.lastSyncTime.toString());
+      const saved = typeof window !== 'undefined' ? localStorage.getItem('sola_last_sync_time') : null;
+      if (saved) {
+        this.lastSyncTime = parseInt(saved, 10);
       }
       if (this.onEmailsUpdated && emails.length > 0) {
         this.onEmailsUpdated(emails);
@@ -137,6 +161,9 @@ class SyncManager {
    * Formats how long ago the last sync occurred (e.g. "Just now", "4m ago", "2h ago")
    */
   formatRelativeLastSync(): string {
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      return 'Offline';
+    }
     if (!this.lastSyncTime) return 'Never synced';
     const diffSec = Math.max(0, Math.floor((Date.now() - this.lastSyncTime) / 1000));
     if (diffSec < 60) return 'Just now';

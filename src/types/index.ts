@@ -16,6 +16,7 @@ export interface EmailThread {
   sender: string;
   subject: string;
   snippet: string;
+  body_html?: string;
   ai_summary?: string;
   category: 'Primary' | 'Updates' | 'Promotions' | 'Social' | string;
   is_read: boolean;
@@ -30,6 +31,14 @@ export interface ProjectTelemetry {
   name: string;
   repo_slug?: string;
   vercel_project_id?: string;
+  framework?: string;
+  live_url?: string;
+  deployment_url?: string;
+  last_commit_message?: string;
+  last_commit_branch?: string;
+  last_commit_author?: string;
+  last_deployment_at?: string;
+  latest_build_state?: string;
   last_status: 'healthy' | 'building' | 'failed' | 'warning' | 'unknown';
   last_checked_at: string;
   open_prs?: number;

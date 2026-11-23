@@ -1,9 +1,10 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import {
-  UserCircle as UserCircleIcon,
   Trash as TrashIcon,
   Check as CheckIcon,
   CheckSquare as CheckSquareIcon,
+  Checks as ChecksIcon,
+  X as XIcon,
 } from '@phosphor-icons/react';
 import type { EmailThread, EmailCategoryTab } from '../types';
 
@@ -22,13 +23,47 @@ interface InboxFeedProps {
   onDeleteEmails?: (ids: string[]) => void;
 }
 
+function formatFeedDate(dateStr: string): string {
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return '';
+
+  const now = new Date();
+
+  // If today: show time (e.g. "02:30 PM")
+  const isToday =
+    date.getFullYear() === now.getFullYear() &&
+    date.getMonth() === now.getMonth() &&
+    date.getDate() === now.getDate();
+
+  if (isToday) {
+    return date.toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  }
+
+  // This year (not today): show Month and Day (e.g. "Nov 22")
+  if (date.getFullYear() === now.getFullYear()) {
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+    });
+  }
+
+  // Last year or older: dd/mm/yy format (e.g. "23/11/25")
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = String(date.getFullYear()).slice(-2);
+  return `${day}/${month}/${year}`;
+}
+
 export const InboxFeed: React.FC<InboxFeedProps> = ({
   emails,
   selectedId,
   onSelect,
   selectedAccount = 'all',
   accounts = [],
-  onSelectAccount,
+  onSelectAccount: _onSelectAccount,
   lastSyncText,
   isSyncing = false,
   categoryTab = 'Primary',
@@ -106,15 +141,9 @@ export const InboxFeed: React.FC<InboxFeedProps> = ({
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-[#18181a]">
-      {/* Subheader: Active Account Context, Multi-Select Toggle & Last Sync */}
+      {/* Subheader: Selection Toggle, Message Count & Last Sync */}
       <div className="h-8 px-3 border-b border-white/[0.06] flex items-center justify-between text-[11px] shrink-0 bg-[#161618]">
-        <div className="flex items-center gap-1.5 min-w-0">
-          <UserCircleIcon className="w-3.5 h-3.5 text-[#e5a93c] shrink-0" weight="fill" />
-          <span className="font-medium text-[#f5f5f7] truncate max-w-[100px]">
-            {selectedAccount === 'all' ? 'All Inboxes' : selectedAccount}
-          </span>
-        </div>
-        <div className="flex items-center gap-2 text-[#8e8e93] shrink-0 text-[10px]">
+        <div className="flex items-center gap-2">
           {displayedEmails.length > 0 && (
             <button
               onClick={() => {
@@ -125,25 +154,26 @@ export const InboxFeed: React.FC<InboxFeedProps> = ({
                   setIsSelectMode(true);
                 }
               }}
-              className={`px-1.5 py-0.5 rounded text-[10px] font-medium transition-colors cursor-pointer ${
+              className={`w-5 h-5 rounded flex items-center justify-center transition-colors cursor-pointer ${
                 isSelectMode
                   ? 'bg-[#e5a93c]/20 text-[#e5a93c]'
                   : 'hover:text-[#f5f5f7] hover:bg-white/[0.06] text-[#8e8e93]'
               }`}
+              title={isSelectMode ? 'Exit selection' : 'Select emails'}
             >
-              {isSelectMode ? 'Done' : 'Select'}
+              <ChecksIcon className="w-3.5 h-3.5" />
             </button>
           )}
-          <span className="font-mono">
+          <span className="font-mono text-[10.5px] text-[#d1d1d6] whitespace-nowrap">
             {displayedEmails.length} {categoryTab === 'All' ? (displayedEmails.length === 1 ? 'msg' : 'msgs') : `in ${categoryTab}`}
           </span>
-          {lastSyncText && (
-            <>
-              <span className="text-white/20">•</span>
-              <span className="font-mono">{isSyncing ? 'Syncing...' : lastSyncText}</span>
-            </>
-          )}
         </div>
+
+        {lastSyncText && (
+          <div className="flex items-center gap-1.5 text-[#8e8e93] shrink-0 text-[10px] font-mono">
+            <span>{isSyncing ? 'Syncing...' : lastSyncText}</span>
+          </div>
+        )}
       </div>
 
       {/* Category Tabs: Primary (Default), Updates (2nd Tab), All Mail */}
@@ -195,16 +225,28 @@ export const InboxFeed: React.FC<InboxFeedProps> = ({
         </div>
       </div>
 
-      {/* Multi-Select Action Bar */}
+      {/* Multi-Select Action Bar (Pure Icon-Based) */}
       {(isSelectMode || selectedIds.size > 0) && (
-        <div className="px-3 py-1.5 bg-[#1e1e22] border-b border-white/[0.08] flex items-center justify-between text-[11px] shrink-0 animate-fade-in">
+        <div className="h-8 px-3 bg-[#1e1e22] border-b border-white/[0.08] flex items-center justify-between shrink-0 animate-fade-in">
+          {/* Left: Select All toggle icon + compact counter */}
           <div className="flex items-center gap-2">
             <button
               onClick={handleToggleSelectAll}
-              className="text-[#d1d1d6] hover:text-[#f5f5f7] transition-colors flex items-center gap-1.5 font-medium cursor-pointer"
+              className={`w-6 h-6 rounded flex items-center justify-center transition-colors cursor-pointer ${
+                displayedEmails.length > 0 &&
+                displayedEmails.every((e) => selectedIds.has(e.id))
+                  ? 'bg-[#e5a93c]/20 text-[#e5a93c]'
+                  : 'text-[#8e8e93] hover:text-[#f5f5f7] hover:bg-white/[0.06]'
+              }`}
+              title={
+                displayedEmails.length > 0 &&
+                displayedEmails.every((e) => selectedIds.has(e.id))
+                  ? 'Deselect all'
+                  : 'Select all'
+              }
             >
               <CheckSquareIcon
-                className="w-3.5 h-3.5 text-[#e5a93c]"
+                className="w-4 h-4"
                 weight={
                   displayedEmails.length > 0 &&
                   displayedEmails.every((e) => selectedIds.has(e.id))
@@ -212,26 +254,24 @@ export const InboxFeed: React.FC<InboxFeedProps> = ({
                     : 'regular'
                 }
               />
-              <span>
-                {displayedEmails.length > 0 &&
-                displayedEmails.every((e) => selectedIds.has(e.id))
-                  ? 'Deselect All'
-                  : 'Select All'}
-              </span>
             </button>
-            <span className="text-[#636366] font-mono">
-              ({selectedIds.size} selected)
-            </span>
+
+            {selectedIds.size > 0 && (
+              <span className="px-1.5 py-0.5 rounded-full bg-[#e5a93c]/15 text-[#e5a93c] text-[10.5px] font-mono font-medium whitespace-nowrap">
+                {selectedIds.size}
+              </span>
+            )}
           </div>
 
-          <div className="flex items-center gap-1.5">
+          {/* Right: Trash delete icon + Close cancel icon */}
+          <div className="flex items-center gap-1">
             {selectedIds.size > 0 && (
               <button
                 onClick={handleDeleteSelected}
-                className="flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#ff453a]/20 hover:bg-[#ff453a]/30 active:bg-[#ff453a]/40 text-[#ff453a] font-medium text-[11px] transition-colors cursor-pointer"
+                className="w-6 h-6 rounded flex items-center justify-center bg-[#ff453a]/20 hover:bg-[#ff453a]/30 active:bg-[#ff453a]/40 text-[#ff453a] transition-colors cursor-pointer"
+                title={`Delete ${selectedIds.size} selected`}
               >
-                <TrashIcon className="w-3 h-3" weight="bold" />
-                <span>Delete ({selectedIds.size})</span>
+                <TrashIcon className="w-3.5 h-3.5" weight="bold" />
               </button>
             )}
             <button
@@ -239,9 +279,10 @@ export const InboxFeed: React.FC<InboxFeedProps> = ({
                 setIsSelectMode(false);
                 setSelectedIds(new Set());
               }}
-              className="text-[#8e8e93] hover:text-[#f5f5f7] px-2 py-0.5 rounded text-[11px] transition-colors cursor-pointer"
+              className="w-6 h-6 rounded flex items-center justify-center text-[#8e8e93] hover:text-[#f5f5f7] hover:bg-white/[0.08] transition-colors cursor-pointer"
+              title="Cancel selection"
             >
-              Cancel
+              <XIcon className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
@@ -368,11 +409,8 @@ export const InboxFeed: React.FC<InboxFeedProps> = ({
                     >
                       <TrashIcon className="w-3 h-3" />
                     </button>
-                    <span className="text-[11px] text-[#8e8e93]">
-                      {new Date(item.received_at).toLocaleTimeString([], {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
+                    <span className="text-[11px] text-[#8e8e93] font-mono shrink-0">
+                      {formatFeedDate(item.received_at)}
                     </span>
                   </div>
                 </div>

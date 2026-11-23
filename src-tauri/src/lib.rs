@@ -96,7 +96,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             email::sync_gmail_emails,
             system::get_database_path,
-            system::reveal_database
+            system::reveal_database,
+            system::get_vercel_credentials
         ])
         .run(tauri::generate_context!())
         .expect("error while running Sola desktop application");

@@ -1,5 +1,11 @@
 use tauri::Manager;
 
+#[derive(serde::Serialize, serde::Deserialize, Default)]
+pub struct VercelConfig {
+    pub token: Option<String>,
+    pub team_id: Option<String>,
+}
+
 #[tauri::command]
 pub fn get_database_path(app: tauri::AppHandle) -> Result<String, String> {
     app.path()
@@ -20,4 +26,21 @@ pub fn reveal_database(app: tauri::AppHandle) -> Result<(), String> {
         }
     }
     Ok(())
+}
+
+#[tauri::command]
+pub fn get_vercel_credentials() -> Result<VercelConfig, String> {
+    let _ = dotenvy::dotenv();
+    let _ = dotenvy::from_filename("../.env");
+
+    let token = std::env::var("VERCEL_API_TOKEN")
+        .ok()
+        .or_else(|| std::env::var("VERCEL_TOKEN").ok())
+        .filter(|t| !t.trim().is_empty());
+
+    let team_id = std::env::var("VERCEL_TEAM_ID")
+        .ok()
+        .filter(|t| !t.trim().is_empty());
+
+    Ok(VercelConfig { token, team_id })
 }

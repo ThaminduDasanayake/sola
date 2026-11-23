@@ -14,6 +14,36 @@ export async function getDb(): Promise<Database | null> {
   try {
     // Only available inside Tauri runtime
     dbInstance = await Database.load('sqlite:sola.db');
+
+    // Ensure emails table exists and has all required columns
+    await dbInstance.execute(`
+      CREATE TABLE IF NOT EXISTS emails (
+        id TEXT PRIMARY KEY,
+        thread_id TEXT NOT NULL,
+        sender TEXT NOT NULL,
+        subject TEXT NOT NULL,
+        snippet TEXT,
+        ai_summary TEXT,
+        category TEXT DEFAULT 'Primary',
+        is_read INTEGER DEFAULT 0,
+        received_at DATETIME NOT NULL,
+        account_email TEXT
+      );
+    `);
+
+    // In case the table was created by an older migration without account_email or category
+    try {
+      await dbInstance.execute('ALTER TABLE emails ADD COLUMN account_email TEXT;');
+    } catch {
+      // Column already exists
+    }
+
+    try {
+      await dbInstance.execute('ALTER TABLE emails ADD COLUMN category TEXT DEFAULT "Primary";');
+    } catch {
+      // Column already exists
+    }
+
     return dbInstance;
   } catch (err) {
     console.info('Running in browser or outside Tauri runtime - using in-memory state.', err);
@@ -104,20 +134,53 @@ export async function fetchEmails(): Promise<EmailThread[]> {
   if (db) {
     try {
       const rows = await db.select<any[]>(
-        `SELECT * FROM emails 
-         WHERE category IN ('Primary', 'Updates', 'Action', 'Dev', 'Receipt') 
-         ORDER BY received_at DESC`
+        `SELECT * FROM emails ORDER BY received_at DESC`
       );
-      if (rows.length > 0) {
-        return rows.map((r) => ({
-          ...r,
-          is_read: Boolean(r.is_read),
-        }));
+      if (rows && rows.length > 0) {
+        const mapped: EmailThread[] = rows
+          .filter((r) => r.category !== 'Promotions' && r.category !== 'Social' && r.category !== 'Forums')
+          .map((r) => ({
+            id: r.id,
+            thread_id: r.thread_id,
+            sender: r.sender,
+            subject: r.subject,
+            snippet: r.snippet || '',
+            ai_summary: r.ai_summary || undefined,
+            category: r.category || 'Primary',
+            is_read: Boolean(r.is_read),
+            received_at: r.received_at,
+            account_email: r.account_email || '',
+          }));
+        memoryEmails = mapped;
+        // Keep localStorage offline snapshot in sync
+        if (typeof window !== 'undefined' && mapped.length > 0) {
+          try {
+            localStorage.setItem('sola_cached_emails', JSON.stringify(mapped));
+          } catch {}
+        }
+        return mapped;
       }
     } catch (e) {
       console.warn('SQLite emails read failed:', e);
     }
   }
+
+  // Fallback to localStorage offline snapshot
+  if (typeof window !== 'undefined') {
+    try {
+      const cached = localStorage.getItem('sola_cached_emails');
+      if (cached) {
+        const parsed: EmailThread[] = JSON.parse(cached);
+        if (parsed.length > 0) {
+          memoryEmails = parsed;
+          return parsed;
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to read localStorage cached emails:', e);
+    }
+  }
+
   return memoryEmails;
 }
 
@@ -161,6 +224,11 @@ export async function deleteEmails(ids: string[]): Promise<void> {
   if (ids.length === 0) return;
   const idSet = new Set(ids);
   memoryEmails = memoryEmails.filter((e) => !idSet.has(e.id));
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem('sola_cached_emails', JSON.stringify(memoryEmails));
+    } catch {}
+  }
   const db = await getDb();
   if (db) {
     try {
@@ -217,6 +285,14 @@ export async function syncGmail(limit?: number): Promise<EmailThread[]> {
       // Sort newest first
       fetched.sort((a, b) => new Date(b.received_at).getTime() - new Date(a.received_at).getTime());
       memoryEmails = fetched;
+
+      // Always save to localStorage offline snapshot
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('sola_cached_emails', JSON.stringify(fetched));
+        } catch {}
+      }
+
       const db = await getDb();
       if (db) {
         // Clean out any legacy or promotional/social/forum emails
@@ -240,21 +316,26 @@ export async function syncGmail(limit?: number): Promise<EmailThread[]> {
                 item.subject,
                 item.snippet,
                 item.ai_summary || '',
-                item.category,
+                item.category || 'Primary',
                 item.is_read ? 1 : 0,
                 item.received_at,
-                item.account_email,
+                item.account_email || '',
               ]
             );
           } catch (e) {
-            console.warn('Error saving synced email to sqlite:', e);
+            console.error('Error saving synced email to sqlite:', e);
           }
         }
       }
       return fetched;
     }
   } catch (err) {
-    console.warn('Gmail sync error:', err);
+    console.warn('Gmail sync error (offline or network):', err);
+    // When offline without WiFi, do NOT throw and lose local emails! Return existing emails!
+    const existing = await fetchEmails();
+    if (existing.length > 0) {
+      return existing;
+    }
     throw err;
   }
   return fetchEmails();

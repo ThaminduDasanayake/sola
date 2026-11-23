@@ -54,9 +54,9 @@ class SyncManager {
 
     try {
       const emails = await syncGmail(limit);
-      this.lastSyncTime = Date.now();
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('sola_last_sync_time', this.lastSyncTime.toString());
+      const saved = typeof window !== 'undefined' ? localStorage.getItem('sola_last_sync_time') : null;
+      if (saved) {
+        this.lastSyncTime = parseInt(saved, 10);
       }
       if (this.onEmailsUpdated && emails.length > 0) {
         this.onEmailsUpdated(emails);

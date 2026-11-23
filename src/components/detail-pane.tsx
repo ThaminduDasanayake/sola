@@ -11,7 +11,7 @@ import {
   Pause as PauseIcon,
   SkipForward as SkipForwardIcon,
   SkipBack as SkipBackIcon,
-  X as XIcon,
+  Stop as StopIcon,
 } from '@phosphor-icons/react';
 import { ttsService, TTSState } from '../services/tts';
 import { HtmlEmailViewer } from './html-email-viewer';
@@ -138,39 +138,98 @@ export const DetailPane: React.FC<DetailPaneProps> = ({ item, type, onDeleteEmai
         {/* Detail Action Bar */}
         <div className="h-10 border-b border-white/[0.06] flex items-center justify-between px-6 shrink-0 sticky top-0 bg-[#141416]/95 backdrop-blur z-30">
           <span className="text-[12px] text-[#e5a93c] font-medium">{email.category}</span>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => ttsService.toggle(textToRead)}
-              className={`h-7 px-3 rounded-full flex items-center gap-1.5 text-[12px] font-medium transition-colors cursor-pointer ${
-                isCurrentEmailAudio && ttsState.isPlaying
-                  ? 'bg-[#e5a93c] text-[#1a1918]'
-                  : isCurrentEmailAudio && ttsState.isPaused
-                  ? 'bg-[#e5a93c]/20 border border-[#e5a93c] text-[#e5a93c]'
-                  : 'text-[#8e8e93] hover:text-[#f5f5f7] hover:bg-white/[0.08]'
-              }`}
-              title={
-                isCurrentEmailAudio && ttsState.isPlaying
-                  ? 'Pause audio'
-                  : isCurrentEmailAudio && ttsState.isPaused
-                  ? 'Resume audio'
-                  : 'Listen to newsletter'
-              }
-            >
-              {isCurrentEmailAudio && ttsState.isPlaying ? (
-                <PauseIcon weight="fill" className="w-3.5 h-3.5" />
-              ) : isCurrentEmailAudio && ttsState.isPaused ? (
-                <PlayIcon weight="fill" className="w-3.5 h-3.5" />
-              ) : (
-                <SpeakerHighIcon className="w-3.5 h-3.5 text-[#e5a93c]" />
+          <div className="flex items-center gap-1.5">
+            {/* Audio Controls: expands/pushes out to the left when active */}
+            <div className="flex items-center">
+              {/* Expanded Controller Pill */}
+              <div
+                className={`flex items-center overflow-hidden transition-all duration-300 ease-out ${
+                  hasActiveAudio
+                    ? 'max-w-[420px] opacity-100 bg-white/[0.08] border border-white/[0.06] rounded-full p-0.5 gap-1.5 shadow-sm'
+                    : 'max-w-0 opacity-0 pointer-events-none'
+                }`}
+              >
+                {/* Stop / Close */}
+                <button
+                  onClick={() => ttsService.stop()}
+                  className="w-6 h-6 rounded-full flex items-center justify-center text-[#8e8e93] hover:text-[#ff453a] hover:bg-white/[0.08] transition-colors cursor-pointer shrink-0 ml-0.5"
+                  title="Stop audio"
+                >
+                  <StopIcon weight="fill" className="w-3 h-3" />
+                </button>
+
+                {/* 5 Speed Options (2 slomo: 0.5x, 0.75x, normal 1x, 2 fast: 1.25x, 1.5x) */}
+                <div className="flex items-center bg-white/[0.04] rounded-full p-0.5 border border-white/[0.04] text-[10px] font-mono shrink-0">
+                  {[
+                    { label: '0.5x', rate: 0.5 },
+                    { label: '0.75x', rate: 0.75 },
+                    { label: '1x', rate: 1.0 },
+                    { label: '1.25x', rate: 1.25 },
+                    { label: '1.5x', rate: 1.5 },
+                  ].map(({ label, rate }) => {
+                    const isSelected = Math.abs(ttsState.speedRate - rate) < 0.04;
+                    return (
+                      <button
+                        key={rate}
+                        onClick={() => ttsService.setRate(rate)}
+                        className={`px-1.5 py-0.5 rounded-full transition-all cursor-pointer font-medium ${
+                          isSelected
+                            ? 'bg-[#e5a93c] text-[#141416] font-semibold shadow-sm'
+                            : 'text-[#8e8e93] hover:text-[#f5f5f7] hover:bg-white/[0.06]'
+                        }`}
+                        title={`Playback speed: ${label}`}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Previous paragraph */}
+                <button
+                  onClick={() => ttsService.previous()}
+                  disabled={ttsState.currentChunkIndex <= 0}
+                  className="w-6 h-6 rounded-full flex items-center justify-center text-white/80 hover:text-white hover:bg-white/[0.08] disabled:opacity-30 disabled:hover:bg-transparent transition-colors cursor-pointer shrink-0"
+                  title="Previous paragraph"
+                >
+                  <SkipBackIcon weight="fill" className="w-3 h-3" />
+                </button>
+
+                {/* Play / Pause toggle */}
+                <button
+                  onClick={() => ttsService.togglePlayPause()}
+                  className="w-6 h-6 rounded-full bg-[#e5a93c] text-[#141416] flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-sm cursor-pointer shrink-0"
+                  title={ttsState.isPlaying ? 'Pause' : 'Resume'}
+                >
+                  {ttsState.isPlaying ? (
+                    <PauseIcon weight="fill" className="w-3 h-3" />
+                  ) : (
+                    <PlayIcon weight="fill" className="w-3 h-3" />
+                  )}
+                </button>
+
+                {/* Next paragraph */}
+                <button
+                  onClick={() => ttsService.next()}
+                  disabled={ttsState.currentChunkIndex >= ttsState.totalChunks - 1}
+                  className="w-6 h-6 rounded-full flex items-center justify-center text-white/80 hover:text-white hover:bg-white/[0.08] disabled:opacity-30 disabled:hover:bg-transparent transition-colors cursor-pointer shrink-0 mr-0.5"
+                  title="Next paragraph"
+                >
+                  <SkipForwardIcon weight="fill" className="w-3 h-3" />
+                </button>
+              </div>
+
+              {/* Inactive single icon button (shown when audio is not active) */}
+              {!hasActiveAudio && (
+                <button
+                  onClick={() => ttsService.speak(textToRead)}
+                  className="w-7 h-7 rounded-full bg-white/[0.08] border border-white/[0.06] hover:bg-white/[0.14] flex items-center justify-center text-white/90 transition-colors shadow-sm cursor-pointer"
+                  title="Listen to email"
+                >
+                  <SpeakerHighIcon className="w-3.5 h-3.5 text-[#e5a93c]" />
+                </button>
               )}
-              <span>
-                {isCurrentEmailAudio && ttsState.isPlaying
-                  ? 'Pause'
-                  : isCurrentEmailAudio && ttsState.isPaused
-                  ? 'Resume'
-                  : 'Listen'}
-              </span>
-            </button>
+            </div>
 
             <button
               onClick={() => onDeleteEmail?.(email.id)}
@@ -262,69 +321,6 @@ export const DetailPane: React.FC<DetailPaneProps> = ({ item, type, onDeleteEmai
             )}
           </div>
         </div>
-
-        {/* Floating Audio Controller Dock */}
-        {hasActiveAudio && (
-          <div className="sticky bottom-5 mx-auto z-40 bg-[#202024]/95 backdrop-blur-2xl border border-white/10 rounded-full px-4 py-2 shadow-2xl flex items-center gap-2.5 select-none animate-in fade-in slide-in-from-bottom-2 duration-150">
-            {/* Prev paragraph / Rewind */}
-            <button
-              onClick={() => ttsService.previous()}
-              disabled={ttsState.currentChunkIndex <= 0}
-              className="w-7 h-7 rounded-full flex items-center justify-center text-white/80 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:hover:bg-transparent transition-colors cursor-pointer"
-              title="Previous paragraph"
-            >
-              <SkipBackIcon weight="fill" className="w-3.5 h-3.5" />
-            </button>
-
-            {/* Play / Pause toggle */}
-            <button
-              onClick={() => ttsService.togglePlayPause()}
-              className="w-8 h-8 rounded-full bg-[#e5a93c] text-[#141416] flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-md cursor-pointer"
-              title={ttsState.isPlaying ? 'Pause' : 'Resume'}
-            >
-              {ttsState.isPlaying ? (
-                <PauseIcon weight="fill" className="w-4 h-4" />
-              ) : (
-                <PlayIcon weight="fill" className="w-4 h-4 ml-0.5" />
-              )}
-            </button>
-
-            {/* Next paragraph / Fast Forward */}
-            <button
-              onClick={() => ttsService.next()}
-              disabled={ttsState.currentChunkIndex >= ttsState.totalChunks - 1}
-              className="w-7 h-7 rounded-full flex items-center justify-center text-white/80 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:hover:bg-transparent transition-colors cursor-pointer"
-              title="Next paragraph"
-            >
-              <SkipForwardIcon weight="fill" className="w-3.5 h-3.5" />
-            </button>
-
-            {/* Progress counter */}
-            {ttsState.totalChunks > 0 && (
-              <div className="flex items-center gap-1.5 pl-2 pr-1 border-l border-white/10 text-[11px] font-mono text-[#a1a1aa]">
-                <span>¶ {ttsState.currentChunkIndex + 1}/{ttsState.totalChunks}</span>
-              </div>
-            )}
-
-            {/* Speed pill */}
-            <button
-              onClick={() => ttsService.cycleRate()}
-              className="px-2 py-0.5 rounded-full bg-white/[0.08] hover:bg-white/[0.16] text-[10.5px] font-mono font-medium text-[#e5a93c] transition-colors cursor-pointer"
-              title="Cycle reading speed"
-            >
-              {ttsState.speedRate.toFixed(2)}x
-            </button>
-
-            {/* Stop / Close button */}
-            <button
-              onClick={() => ttsService.stop()}
-              className="w-6 h-6 rounded-full hover:bg-white/10 flex items-center justify-center text-[#8e8e93] hover:text-[#ff453a] transition-colors ml-0.5 cursor-pointer"
-              title="Stop audio"
-            >
-              <XIcon className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        )}
       </div>
     );
   }

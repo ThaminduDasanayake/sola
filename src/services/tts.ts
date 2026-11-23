@@ -127,16 +127,22 @@ class TTSService {
   private currentChunkIndex = 0;
   private voices: SpeechSynthesisVoice[] = [];
   private selectedVoiceName: string | null = null;
-  // Default to 0.90x for calm, clear, deliberate cadence
-  private speechRate: number = 0.9;
+  // Default to 1.0x (standard speed)
+  private speechRate: number = 1.0;
   private sessionId = 0;
 
   constructor() {
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       this.selectedVoiceName = localStorage.getItem('sola_tts_voice');
+      const hasInit1x = localStorage.getItem('sola_tts_rate_default_1x');
       const savedRate = localStorage.getItem('sola_tts_rate');
-      if (savedRate) {
-        this.speechRate = parseFloat(savedRate) || 0.9;
+
+      if (!hasInit1x) {
+        this.speechRate = 1.0;
+        localStorage.setItem('sola_tts_rate', '1.0');
+        localStorage.setItem('sola_tts_rate_default_1x', 'true');
+      } else if (savedRate) {
+        this.speechRate = parseFloat(savedRate) || 1.0;
       }
 
       this.loadVoices();
@@ -179,22 +185,22 @@ class TTSService {
       localStorage.setItem('sola_tts_rate', this.speechRate.toString());
     }
     this.notify();
+    if (this.isPlaying) {
+      this.playCurrentChunk();
+    }
   }
 
   cycleRate(): number {
-    const rates = [0.85, 0.9, 1.0, 1.15, 1.25];
+    const rates = [0.5, 0.75, 1.0, 1.25, 1.5];
     const current = this.speechRate;
     let nextIdx = rates.findIndex((r) => Math.abs(r - current) < 0.04);
     if (nextIdx === -1) {
-      nextIdx = 1; // 0.90
+      nextIdx = 2; // 1.0x
     } else {
       nextIdx = (nextIdx + 1) % rates.length;
     }
     const nextRate = rates[nextIdx];
     this.setRate(nextRate);
-    if (this.isPlaying) {
-      this.playCurrentChunk();
-    }
     return nextRate;
   }
 

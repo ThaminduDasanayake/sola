@@ -24,6 +24,40 @@ interface InboxFeedProps {
   onDeleteEmails?: (ids: string[]) => void;
 }
 
+function formatFeedDate(dateStr: string): string {
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return '';
+
+  const now = new Date();
+
+  // If today: show time (e.g. "02:30 PM")
+  const isToday =
+    date.getFullYear() === now.getFullYear() &&
+    date.getMonth() === now.getMonth() &&
+    date.getDate() === now.getDate();
+
+  if (isToday) {
+    return date.toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  }
+
+  // This year (not today): show Month and Day (e.g. "Nov 22")
+  if (date.getFullYear() === now.getFullYear()) {
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+    });
+  }
+
+  // Last year or older: dd/mm/yy format (e.g. "23/11/25")
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = String(date.getFullYear()).slice(-2);
+  return `${day}/${month}/${year}`;
+}
+
 export const InboxFeed: React.FC<InboxFeedProps> = ({
   emails,
   selectedId,
@@ -376,11 +410,8 @@ export const InboxFeed: React.FC<InboxFeedProps> = ({
                     >
                       <TrashIcon className="w-3 h-3" />
                     </button>
-                    <span className="text-[11px] text-[#8e8e93]">
-                      {new Date(item.received_at).toLocaleTimeString([], {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
+                    <span className="text-[11px] text-[#8e8e93] font-mono shrink-0">
+                      {formatFeedDate(item.received_at)}
                     </span>
                   </div>
                 </div>

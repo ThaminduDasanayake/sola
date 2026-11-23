@@ -198,6 +198,20 @@ export async function fetchProjects(): Promise<ProjectTelemetry[]> {
 }
 
 export async function fetchDeletedEmailIds(): Promise<string[]> {
+  const deletedSet = new Set<string>();
+
+  // 1. From localStorage backup:
+  if (typeof window !== 'undefined') {
+    try {
+      const stored = localStorage.getItem('sola_deleted_email_ids');
+      if (stored) {
+        const list: string[] = JSON.parse(stored);
+        list.forEach((id) => deletedSet.add(id));
+      }
+    } catch {}
+  }
+
+  // 2. From SQLite:
   const db = await getDb();
   if (db) {
     try {
@@ -208,12 +222,13 @@ export async function fetchDeletedEmailIds(): Promise<string[]> {
         );`
       );
       const rows = await db.select<{ id: string }[]>('SELECT id FROM deleted_emails');
-      return rows.map((r) => r.id);
+      rows.forEach((r) => deletedSet.add(r.id));
     } catch (e) {
       console.warn('Failed to fetch deleted email ids:', e);
     }
   }
-  return [];
+
+  return Array.from(deletedSet);
 }
 
 export async function deleteEmail(id: string): Promise<void> {
@@ -224,14 +239,27 @@ export async function deleteEmails(ids: string[]): Promise<void> {
   if (ids.length === 0) return;
   const idSet = new Set(ids);
   memoryEmails = memoryEmails.filter((e) => !idSet.has(e.id));
+
+  // Update localStorage offline cache and deleted IDs blacklist
   if (typeof window !== 'undefined') {
     try {
       localStorage.setItem('sola_cached_emails', JSON.stringify(memoryEmails));
+      const existing = localStorage.getItem('sola_deleted_email_ids');
+      const list: string[] = existing ? JSON.parse(existing) : [];
+      const updated = Array.from(new Set([...list, ...ids]));
+      localStorage.setItem('sola_deleted_email_ids', JSON.stringify(updated));
     } catch {}
   }
+
   const db = await getDb();
   if (db) {
     try {
+      await db.execute(
+        `CREATE TABLE IF NOT EXISTS deleted_emails (
+          id TEXT PRIMARY KEY,
+          deleted_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );`
+      );
       const placeholders = ids.map(() => '?').join(',');
       await db.execute(`DELETE FROM emails WHERE id IN (${placeholders})`, ids);
       const now = new Date().toISOString();

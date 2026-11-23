@@ -170,20 +170,33 @@ pub fn fetch_account_emails(
                 let mut subject = String::from("(No Subject)");
                 let mut from = String::from("Unknown");
                 let mut date_str = String::new();
-                let mut message_id = format!("msg-{}", msg.message);
+                let mut message_id = format!("uid-{}", uid);
 
                 for header in parsed_headers.headers {
                     match header.get_key().to_lowercase().as_str() {
                         "subject" => subject = header.get_value(),
                         "from" => from = header.get_value(),
                         "date" => date_str = header.get_value(),
-                        "message-id" => message_id = header.get_value(),
+                        "message-id" => {
+                            let val = header.get_value();
+                            if !val.trim().is_empty() {
+                                message_id = val.trim().to_string();
+                            }
+                        }
                         _ => {}
                     }
                 }
 
+                let clean_id = message_id.trim();
+                let stripped_id = clean_id.trim_matches(['<', '>']);
+                let uid_tag = format!("uid-{}", uid);
+
                 // Never re-add an email that the user deleted in Sola
-                if deleted_ids.contains(&message_id) {
+                if deleted_ids.contains(clean_id)
+                    || deleted_ids.contains(stripped_id)
+                    || deleted_ids.contains(&format!("<{}>", stripped_id))
+                    || deleted_ids.contains(&uid_tag)
+                {
                     continue;
                 }
 
@@ -254,19 +267,32 @@ pub fn fetch_account_emails(
             let mut subject = String::from("(No Subject)");
             let mut from = String::from("Unknown");
             let mut date_str = String::new();
-            let mut message_id = format!("msg-{}", msg.message);
+            let mut message_id = format!("uid-{}", uid);
 
             for header in parsed_headers.headers {
                 match header.get_key().to_lowercase().as_str() {
                     "subject" => subject = header.get_value(),
                     "from" => from = header.get_value(),
                     "date" => date_str = header.get_value(),
-                    "message-id" => message_id = header.get_value(),
+                    "message-id" => {
+                        let val = header.get_value();
+                        if !val.trim().is_empty() {
+                            message_id = val.trim().to_string();
+                        }
+                    }
                     _ => {}
                 }
             }
 
-            if deleted_ids.contains(&message_id) {
+            let clean_id = message_id.trim();
+            let stripped_id = clean_id.trim_matches(['<', '>']);
+            let uid_tag = format!("uid-{}", uid);
+
+            if deleted_ids.contains(clean_id)
+                || deleted_ids.contains(stripped_id)
+                || deleted_ids.contains(&format!("<{}>", stripped_id))
+                || deleted_ids.contains(&uid_tag)
+            {
                 continue;
             }
 

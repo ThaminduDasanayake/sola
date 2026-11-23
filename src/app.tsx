@@ -147,10 +147,14 @@ export function App() {
       }
       if (pList.length > 0 && !selectedProject) setSelectedProject(pList[0]);
 
-      // If local emails are empty, run an automatic initial sync in the background
-      if (eList.length === 0) {
+      // If local emails are empty OR they were saved with the legacy schema (missing body_html / containing raw MIME headers),
+      // trigger an automatic background sync to upgrade all saved emails to rich HTML!
+      const hasLegacyFormat = eList.some(
+        (e) => !e.body_html || e.snippet.includes('Content-Type:')
+      );
+      if (eList.length === 0 || (hasLegacyFormat && typeof navigator !== 'undefined' && navigator.onLine)) {
         syncManager.triggerSync().catch((err) => {
-          console.warn('Initial background sync error:', err);
+          console.warn('Auto background upgrade sync error:', err);
         });
       }
     }

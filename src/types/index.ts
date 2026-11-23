@@ -16,6 +16,7 @@ export interface EmailThread {
   sender: string;
   subject: string;
   snippet: string;
+  body_html?: string;
   ai_summary?: string;
   category: 'Primary' | 'Updates' | 'Promotions' | 'Social' | string;
   is_read: boolean;

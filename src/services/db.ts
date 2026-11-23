@@ -23,6 +23,7 @@ export async function getDb(): Promise<Database | null> {
         sender TEXT NOT NULL,
         subject TEXT NOT NULL,
         snippet TEXT,
+        body_html TEXT,
         ai_summary TEXT,
         category TEXT DEFAULT 'Primary',
         is_read INTEGER DEFAULT 0,
@@ -31,7 +32,7 @@ export async function getDb(): Promise<Database | null> {
       );
     `);
 
-    // In case the table was created by an older migration without account_email or category
+    // In case the table was created by an older migration without account_email, category, or body_html
     try {
       await dbInstance.execute('ALTER TABLE emails ADD COLUMN account_email TEXT;');
     } catch {
@@ -40,6 +41,12 @@ export async function getDb(): Promise<Database | null> {
 
     try {
       await dbInstance.execute('ALTER TABLE emails ADD COLUMN category TEXT DEFAULT "Primary";');
+    } catch {
+      // Column already exists
+    }
+
+    try {
+      await dbInstance.execute('ALTER TABLE emails ADD COLUMN body_html TEXT;');
     } catch {
       // Column already exists
     }
@@ -145,6 +152,7 @@ export async function fetchEmails(): Promise<EmailThread[]> {
             sender: r.sender,
             subject: r.subject,
             snippet: r.snippet || '',
+            body_html: r.body_html || undefined,
             ai_summary: r.ai_summary || undefined,
             category: r.category || 'Primary',
             is_read: Boolean(r.is_read),
@@ -357,14 +365,15 @@ export async function syncGmail(limit?: number): Promise<EmailThread[]> {
         for (const item of fetched) {
           try {
             await db.execute(
-              `INSERT OR REPLACE INTO emails (id, thread_id, sender, subject, snippet, ai_summary, category, is_read, received_at, account_email)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              `INSERT OR REPLACE INTO emails (id, thread_id, sender, subject, snippet, body_html, ai_summary, category, is_read, received_at, account_email)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
               [
                 item.id,
                 item.thread_id,
                 item.sender,
                 item.subject,
                 item.snippet,
+                item.body_html || '',
                 item.ai_summary || '',
                 item.category || 'Primary',
                 item.is_read ? 1 : 0,

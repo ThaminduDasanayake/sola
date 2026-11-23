@@ -9,6 +9,7 @@ import {
   Trash as TrashIcon,
 } from '@phosphor-icons/react';
 import { ttsService, TTSState } from '../services/tts';
+import { HtmlEmailViewer } from './html-email-viewer';
 import type { Bookmark, EmailThread, ProjectTelemetry } from '../types';
 
 interface DetailPaneProps {
@@ -79,9 +80,9 @@ export const DetailPane: React.FC<DetailPaneProps> = ({ item, type, onDeleteEmai
         </div>
 
         {/* Content View */}
-        <div className="max-w-2xl w-full mx-auto px-8 py-6 space-y-6">
+        <div className="max-w-2xl w-full mx-auto px-8 py-6 space-y-6 select-text">
           <div>
-            <h1 className="text-[20px] font-semibold text-[#f5f5f7] leading-tight tracking-tight">
+            <h1 className="text-[20px] font-semibold text-[#f5f5f7] leading-tight tracking-tight select-text">
               {bookmark.title}
             </h1>
             <p className="text-[12px] text-[#8e8e93] mt-1.5 font-normal">
@@ -159,14 +160,14 @@ export const DetailPane: React.FC<DetailPaneProps> = ({ item, type, onDeleteEmai
         </div>
 
         {/* Content View */}
-        <div className="max-w-2xl w-full mx-auto px-8 py-6 space-y-6">
+        <div className="max-w-3xl w-full mx-auto px-8 py-6 space-y-6 select-text">
           <div>
-            <h1 className="text-[20px] font-semibold text-[#f5f5f7] leading-tight tracking-tight">
+            <h1 className="text-[20px] font-semibold text-[#f5f5f7] leading-tight tracking-tight select-text">
               {email.subject}
             </h1>
             <div className="space-y-1.5 mt-2.5">
               <div className="flex items-center justify-between text-[12px] text-[#8e8e93]">
-                <span className="text-[#f5f5f7] font-medium">{email.sender}</span>
+                <span className="text-[#f5f5f7] font-medium select-text">{email.sender}</span>
                 <span>{new Date(email.received_at).toLocaleString([], {
                   dateStyle: 'medium',
                   timeStyle: 'short',
@@ -175,7 +176,7 @@ export const DetailPane: React.FC<DetailPaneProps> = ({ item, type, onDeleteEmai
               {email.account_email && (
                 <div className="flex items-center gap-1.5 text-[11.5px] text-[#8e8e93]">
                   <span>To:</span>
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/[0.06] border border-white/[0.06] text-[#d1d1d6] font-medium">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/[0.06] border border-white/[0.06] text-[#d1d1d6] font-medium select-text">
                     <UserIcon className="w-3 h-3 text-[#e5a93c]" />
                     {email.account_email}
                   </span>
@@ -186,7 +187,7 @@ export const DetailPane: React.FC<DetailPaneProps> = ({ item, type, onDeleteEmai
 
           {email.ai_summary && (
             <div className="p-3.5 rounded-xl bg-white/[0.03] border border-white/[0.04]">
-              <p className="text-[13px] text-[#f5f5f7] leading-relaxed">
+              <p className="text-[13px] text-[#f5f5f7] leading-relaxed select-text">
                 {email.ai_summary}
               </p>
             </div>
@@ -199,7 +200,7 @@ export const DetailPane: React.FC<DetailPaneProps> = ({ item, type, onDeleteEmai
                 {email.action_items.map((action, idx) => (
                   <li
                     key={idx}
-                    className="flex items-start gap-2.5 text-[13px] text-[#d6d6dc]"
+                    className="flex items-start gap-2.5 text-[13px] text-[#d6d6dc] select-text"
                   >
                     <span className="text-[#e5a93c]">•</span>
                     <span>{action}</span>
@@ -209,10 +210,15 @@ export const DetailPane: React.FC<DetailPaneProps> = ({ item, type, onDeleteEmai
             </div>
           )}
 
+          {/* Email Body: Rich HTML if available, otherwise clean text snippet */}
           <div className="pt-4 border-t border-white/[0.06]">
-            <p className="text-[13px] text-[#8e8e93] leading-relaxed whitespace-pre-wrap">
-              {email.snippet}
-            </p>
+            {email.body_html ? (
+              <HtmlEmailViewer html={email.body_html} />
+            ) : (
+              <p className="text-[13px] text-[#8e8e93] leading-relaxed whitespace-pre-wrap select-text">
+                {email.snippet}
+              </p>
+            )}
           </div>
         </div>
       </div>
@@ -230,13 +236,13 @@ export const DetailPane: React.FC<DetailPaneProps> = ({ item, type, onDeleteEmai
           </span>
         </div>
 
-        <div className="max-w-2xl w-full mx-auto px-8 py-6 space-y-6">
+        <div className="max-w-2xl w-full mx-auto px-8 py-6 space-y-6 select-text">
           <div>
-            <h1 className="text-[20px] font-semibold text-[#f5f5f7] tracking-tight">
+            <h1 className="text-[20px] font-semibold text-[#f5f5f7] tracking-tight select-text">
               {project.name}
             </h1>
             {project.repo_slug && (
-              <p className="text-[13px] text-[#e5a93c] mt-1">{project.repo_slug}</p>
+              <p className="text-[13px] text-[#e5a93c] mt-1 select-text">{project.repo_slug}</p>
             )}
           </div>
 

@@ -1,6 +1,11 @@
 export interface TTSState {
   isPlaying: boolean;
+  isPaused: boolean;
   currentText: string | null;
+  currentChunkIndex: number;
+  totalChunks: number;
+  currentChunkText: string | null;
+  speedRate: number;
 }
 
 type TTSListener = (state: TTSState) => void;
@@ -15,9 +20,6 @@ export function cleanTextForSpeech(text: string): string {
   let cleaned = text;
 
   // 1. Remove markdown images and newsletter image metadata lines
-  // e.g. View image: (https://...)
-  // e.g. Follow image link: (https://...)
-  // e.g. Caption: ...
   cleaned = cleaned.replace(/^(?:view\s+image|follow\s+image\s+link|caption|image|photo)\s*:\s*.*$/gim, '');
   cleaned = cleaned.replace(/!\[[^\]]*\]\([^)]*\)/g, '');
 
@@ -38,18 +40,13 @@ export function cleanTextForSpeech(text: string): string {
   cleaned = cleaned.replace(/^(?:click\s+here\s+to\s+unsubscribe|to\s+unsubscribe\s+or\s+change\s+your\s+email\s+settings|sponsored\s+by.*).*$/gim, '');
 
   // 6. Clean markdown formatting
-  // Headers: ### Header -> Header
   cleaned = cleaned.replace(/^#{1,6}\s+(.+)$/gm, '$1');
-  // Bold, italic, strikethrough: **text**, *text*, __text__, _text_, ~~text~~
   cleaned = cleaned.replace(/(\*\*|__)(.*?)\1/g, '$2');
   cleaned = cleaned.replace(/(\*|_)(.*?)\1/g, '$2');
   cleaned = cleaned.replace(/~~(.*?)~~/g, '$1');
-  // Code blocks: ```code``` -> removed
   cleaned = cleaned.replace(/```[\s\S]*?```/g, ' ');
   cleaned = cleaned.replace(/`([^`]+)`/g, '$1');
-  // Blockquotes: > quote -> quote
   cleaned = cleaned.replace(/^>\s*/gm, '');
-  // List bullets: - item, * item, • item
   cleaned = cleaned.replace(/^[\s*•\-–—]+\s*/gm, '');
 
   // 7. Natural phrasing adjustments for spoken speech
@@ -75,7 +72,6 @@ export function cleanTextForSpeech(text: string): string {
   const formattedLines: string[] = [];
   for (const line of lines) {
     let l = line;
-    // If line doesn't end with a punctuation mark, add a period for natural breathing pause
     if (!/[.!?:]$/.test(l)) {
       l = `${l}.`;
     }
@@ -95,7 +91,7 @@ export function cleanTextForSpeech(text: string): string {
  * Splits clean text into short, natural sentence/paragraph chunks
  * to avoid WebKit SpeechSynthesis utterance pauses/timeouts.
  */
-function splitIntoSpokenChunks(text: string): string[] {
+export function splitIntoSpokenChunks(text: string): string[] {
   const paragraphs = text.split(/\n+/).map((p) => p.trim()).filter(Boolean);
   const chunks: string[] = [];
 
@@ -125,10 +121,13 @@ function splitIntoSpokenChunks(text: string): string[] {
 class TTSService {
   private listeners: Set<TTSListener> = new Set();
   private isPlaying = false;
+  private isPaused = false;
   private currentText: string | null = null;
+  private chunks: string[] = [];
+  private currentChunkIndex = 0;
   private voices: SpeechSynthesisVoice[] = [];
   private selectedVoiceName: string | null = null;
-  // Default to 0.90x for a calm, clear, deliberate narrator cadence
+  // Default to 0.90x for calm, clear, deliberate cadence
   private speechRate: number = 0.9;
   private sessionId = 0;
 
@@ -175,30 +174,57 @@ class TTSService {
   }
 
   setRate(rate: number) {
-    this.speechRate = rate;
+    this.speechRate = Math.max(0.5, Math.min(2.0, rate));
     if (typeof window !== 'undefined') {
-      localStorage.setItem('sola_tts_rate', rate.toString());
+      localStorage.setItem('sola_tts_rate', this.speechRate.toString());
     }
+    this.notify();
+  }
+
+  cycleRate(): number {
+    const rates = [0.85, 0.9, 1.0, 1.15, 1.25];
+    const current = this.speechRate;
+    let nextIdx = rates.findIndex((r) => Math.abs(r - current) < 0.04);
+    if (nextIdx === -1) {
+      nextIdx = 1; // 0.90
+    } else {
+      nextIdx = (nextIdx + 1) % rates.length;
+    }
+    const nextRate = rates[nextIdx];
+    this.setRate(nextRate);
+    if (this.isPlaying) {
+      this.playCurrentChunk();
+    }
+    return nextRate;
+  }
+
+  getState(): TTSState {
+    return {
+      isPlaying: this.isPlaying,
+      isPaused: this.isPaused,
+      currentText: this.currentText,
+      currentChunkIndex: this.currentChunkIndex,
+      totalChunks: this.chunks.length,
+      currentChunkText: this.chunks[this.currentChunkIndex] || null,
+      speedRate: this.speechRate,
+    };
   }
 
   subscribe(listener: TTSListener) {
     this.listeners.add(listener);
-    listener({ isPlaying: this.isPlaying, currentText: this.currentText });
+    listener(this.getState());
     return () => {
       this.listeners.delete(listener);
     };
   }
 
   private notify() {
+    const state = this.getState();
     for (const listener of this.listeners) {
-      listener({ isPlaying: this.isPlaying, currentText: this.currentText });
+      listener(state);
     }
   }
 
-  /**
-   * Automatically picks the best, most natural voice available.
-   * Prioritizes enhanced / premium Siri and neural voices on macOS.
-   */
   getBestVoice(overrideName?: string): SpeechSynthesisVoice | undefined {
     const available = this.getVoices();
     if (available.length === 0) return undefined;
@@ -229,14 +255,12 @@ class TTSService {
     });
     if (enhanced) return enhanced;
 
-    // 2. Any enhanced or premium voice
     const anyEnhanced = pool.find((v) => {
       const n = v.name.toLowerCase();
       return n.includes('enhanced') || n.includes('premium') || n.includes('natural');
     });
     if (anyEnhanced) return anyEnhanced;
 
-    // 3. Siri or standard top voices (Ava, Samantha, Zoe, Daniel)
     const topStandard = pool.find((v) => {
       const n = v.name.toLowerCase();
       return (
@@ -249,84 +273,218 @@ class TTSService {
     });
     if (topStandard) return topStandard;
 
-    // 4. Fallback to en-US or first available
     return pool.find((v) => v.lang === 'en-US') || pool[0];
   }
 
-  speak(rawText: string, options?: { voiceName?: string; rate?: number }) {
+  speak(rawText: string, startIndex = 0) {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
-      console.warn('Speech synthesis not supported in this environment');
+      console.warn('Speech synthesis not supported');
       return;
     }
 
-    this.stop();
+    this.stopPlaybackOnly();
 
-    const cleanText = cleanTextForSpeech(rawText);
-    if (!cleanText) {
-      this.isPlaying = false;
-      this.currentText = null;
-      this.notify();
+    const clean = cleanTextForSpeech(rawText);
+    if (!clean) {
+      this.resetState();
       return;
     }
 
-    const chunks = splitIntoSpokenChunks(cleanText);
-    if (chunks.length === 0) return;
+    this.chunks = splitIntoSpokenChunks(clean);
+    if (this.chunks.length === 0) {
+      this.resetState();
+      return;
+    }
 
-    const voice = this.getBestVoice(options?.voiceName);
-    const rate = options?.rate ?? this.speechRate;
-
-    const currentSession = ++this.sessionId;
-    this.isPlaying = true;
     this.currentText = rawText;
+    this.currentChunkIndex = Math.max(0, Math.min(this.chunks.length - 1, startIndex));
+    this.isPlaying = true;
+    this.isPaused = false;
+    this.sessionId++;
+
+    this.playCurrentChunk();
+  }
+
+  private stopPlaybackOnly() {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
+  }
+
+  private resetState() {
+    this.isPlaying = false;
+    this.isPaused = false;
+    this.currentText = null;
+    this.chunks = [];
+    this.currentChunkIndex = 0;
+    this.notify();
+  }
+
+  private playCurrentChunk() {
+    this.stopPlaybackOnly();
+
+    if (this.currentChunkIndex >= this.chunks.length) {
+      this.resetState();
+      return;
+    }
+
+    const chunk = this.chunks[this.currentChunkIndex];
+    const session = this.sessionId;
+    const utterance = new SpeechSynthesisUtterance(chunk);
+    const voice = this.getBestVoice();
+    if (voice) utterance.voice = voice;
+    utterance.rate = this.speechRate;
+    utterance.pitch = 1.0;
+
+    utterance.onend = () => {
+      if (this.sessionId === session && this.isPlaying && !this.isPaused) {
+        if (this.currentChunkIndex + 1 < this.chunks.length) {
+          this.currentChunkIndex++;
+          this.notify();
+          // Small natural breath pause between chunks (120ms)
+          setTimeout(() => {
+            if (this.sessionId === session && this.isPlaying && !this.isPaused) {
+              this.playCurrentChunk();
+            }
+          }, 120);
+        } else {
+          this.resetState();
+        }
+      }
+    };
+
+    utterance.onerror = (e) => {
+      if (e.error === 'canceled' || e.error === 'interrupted') return;
+      console.warn('TTS playback error on chunk:', e);
+      if (this.sessionId === session && this.isPlaying && !this.isPaused) {
+        if (this.currentChunkIndex + 1 < this.chunks.length) {
+          this.currentChunkIndex++;
+          this.playCurrentChunk();
+        } else {
+          this.resetState();
+        }
+      }
+    };
+
+    this.isPlaying = true;
+    this.isPaused = false;
     this.notify();
 
-    chunks.forEach((chunk, index) => {
-      const utterance = new SpeechSynthesisUtterance(chunk);
-      if (voice) utterance.voice = voice;
-      utterance.rate = rate;
-      utterance.pitch = 1.0;
+    window.speechSynthesis.speak(utterance);
+  }
 
-      if (index === chunks.length - 1) {
-        utterance.onend = () => {
-          if (this.sessionId === currentSession) {
-            this.isPlaying = false;
-            this.currentText = null;
-            this.notify();
-          }
-        };
+  pause() {
+    if (!this.isPlaying || this.isPaused) return;
+    this.stopPlaybackOnly();
+    this.isPaused = true;
+    this.isPlaying = false;
+    this.notify();
+  }
+
+  resume() {
+    if (!this.isPaused || !this.currentText) return;
+    this.isPaused = false;
+    this.isPlaying = true;
+    this.sessionId++;
+    this.playCurrentChunk();
+  }
+
+  togglePlayPause() {
+    if (this.isPlaying) {
+      this.pause();
+    } else if (this.isPaused) {
+      this.resume();
+    }
+  }
+
+  toggle(rawText: string) {
+    if (this.currentText === rawText) {
+      if (this.isPlaying) {
+        this.pause();
+      } else if (this.isPaused) {
+        this.resume();
+      } else {
+        this.speak(rawText, 0);
       }
+    } else {
+      this.speak(rawText, 0);
+    }
+  }
 
-      utterance.onerror = (e) => {
-        // Ignore errors caused by manual cancellation
-        if (e.error === 'canceled' || e.error === 'interrupted') return;
-        console.warn('TTS chunk error:', e);
-        if (this.sessionId === currentSession) {
-          this.isPlaying = false;
-          this.currentText = null;
-          this.notify();
-        }
-      };
+  next() {
+    if (this.chunks.length === 0) return;
+    const nextIdx = Math.min(this.chunks.length - 1, this.currentChunkIndex + 1);
+    this.jumpTo(nextIdx);
+  }
 
-      window.speechSynthesis.speak(utterance);
-    });
+  previous() {
+    if (this.chunks.length === 0) return;
+    const prevIdx = Math.max(0, this.currentChunkIndex - 1);
+    this.jumpTo(prevIdx);
+  }
+
+  jumpTo(index: number) {
+    if (this.chunks.length === 0) return;
+    this.currentChunkIndex = Math.max(0, Math.min(this.chunks.length - 1, index));
+    this.sessionId++;
+    this.isPlaying = true;
+    this.isPaused = false;
+    this.playCurrentChunk();
+  }
+
+  /**
+   * Finds the chunk closest to a clicked paragraph or selected text
+   * and immediately jumps to it.
+   */
+  playFromText(textSnippet: string, fallbackRawText?: string) {
+    const cleanSnippet = cleanTextForSpeech(textSnippet).toLowerCase();
+    if (!cleanSnippet) return;
+
+    // If currently not loaded or loaded with different text, initialize with fallback
+    if (!this.currentText && fallbackRawText) {
+      const cleanFull = cleanTextForSpeech(fallbackRawText);
+      this.chunks = splitIntoSpokenChunks(cleanFull);
+      this.currentText = fallbackRawText;
+    }
+
+    if (this.chunks.length === 0) {
+      if (fallbackRawText) this.speak(fallbackRawText, 0);
+      return;
+    }
+
+    // Find best matching chunk
+    const words = cleanSnippet.split(/\s+/).filter((w) => w.length > 3);
+    let bestIndex = -1;
+    let maxMatch = 0;
+
+    for (let i = 0; i < this.chunks.length; i++) {
+      const c = this.chunks[i].toLowerCase();
+      if (c.includes(cleanSnippet) || cleanSnippet.includes(c)) {
+        bestIndex = i;
+        break;
+      }
+      let matches = 0;
+      for (const w of words) {
+        if (c.includes(w)) matches++;
+      }
+      if (matches > maxMatch) {
+        maxMatch = matches;
+        bestIndex = i;
+      }
+    }
+
+    if (bestIndex !== -1) {
+      this.jumpTo(bestIndex);
+    } else {
+      // Default to starting if not found
+      this.jumpTo(0);
+    }
   }
 
   stop() {
     this.sessionId++;
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-      this.isPlaying = false;
-      this.currentText = null;
-      this.notify();
-    }
-  }
-
-  toggle(text: string) {
-    if (this.isPlaying && this.currentText === text) {
-      this.stop();
-    } else {
-      this.speak(text);
-    }
+    this.stopPlaybackOnly();
+    this.resetState();
   }
 }
 

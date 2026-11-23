@@ -2,7 +2,7 @@ import {
   BookmarkSimple as BookmarkSimpleIcon,
   Envelope as EnvelopeIcon,
   GearSix as GearSixIcon,
-  Pulse as PulseIcon,
+  Triangle as TriangleIcon,
 } from '@phosphor-icons/react';
 import React from 'react';
 import type { ActiveTab } from '../types';
@@ -37,9 +37,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
       count: bookmarkCount > 0 ? bookmarkCount : undefined,
     },
     {
-      id: 'pulse' as const,
-      label: 'Pulse',
-      icon: PulseIcon,
+      id: 'vercel' as const,
+      label: 'Vercel',
+      icon: TriangleIcon,
     },
   ];
 

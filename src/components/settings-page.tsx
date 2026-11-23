@@ -588,10 +588,11 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
             <div className="space-y-6">
               <div>
                 <h2 className="text-[20px] font-semibold text-[#f5f5f7] tracking-tight">
-                  Vercel Deployments & Pulse
+                  Vercel Dashboard
                 </h2>
                 <p className="text-[13px] text-[#8e8e93] mt-1">
-                  Connect your Vercel account to monitor deployments and preview status in Pulse.
+                  Connect your Vercel account to monitor deployments and preview status in the
+                  Vercel dashboard.
                 </p>
               </div>
 

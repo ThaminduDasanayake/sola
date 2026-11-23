@@ -3,12 +3,12 @@ import './app.css';
 import { DeleteConfirmDialog } from './components/delete-confirm-dialog';
 import { DetailPane } from './components/detail-pane';
 import { InboxFeed } from './components/inbox-feed';
-import { PulseFeed } from './components/pulse-feed';
 import { QuickAddModal } from './components/quick-add-modal';
 import { SettingsPage } from './components/settings-page';
 import { Sidebar } from './components/sidebar';
 import { TopBar } from './components/top-bar';
 import { VaultFeed } from './components/vault-feed';
+import { VercelFeed } from './components/vercel-feed';
 import {
   addBookmark,
   deleteEmails,
@@ -460,8 +460,8 @@ export function App() {
                 />
               )}
 
-              {activeTab === 'pulse' && (
-                <PulseFeed
+              {activeTab === 'vercel' && (
+                <VercelFeed
                   projects={projects}
                   selectedId={selectedProject?.id ?? null}
                   onSelect={setSelectedProject}
@@ -479,7 +479,7 @@ export function App() {
                 <DetailPane item={selectedEmail} type="email" onDeleteEmail={requestDeleteEmails} />
               )}
               {activeTab === 'vault' && <DetailPane item={selectedBookmark} type="bookmark" />}
-              {activeTab === 'pulse' && <DetailPane item={selectedProject} type="project" />}
+              {activeTab === 'vercel' && <DetailPane item={selectedProject} type="project" />}
             </div>
           </>
         )}

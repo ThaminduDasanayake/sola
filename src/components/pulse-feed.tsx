@@ -1,11 +1,11 @@
-import React from 'react';
 import {
   ArrowsClockwise as ArrowsClockwiseIcon,
+  Gear as GearIcon,
   GitBranch as GitBranchIcon,
   Globe as GlobeIcon,
   WarningCircle as WarningCircleIcon,
-  Gear as GearIcon,
 } from '@phosphor-icons/react';
+import React from 'react';
 import type { ProjectTelemetry } from '../types';
 
 interface PulseFeedProps {
@@ -64,7 +64,9 @@ export const PulseFeed: React.FC<PulseFeedProps> = ({
             className="w-7 h-7 rounded-full flex items-center justify-center text-[#8e8e93] hover:text-[#f5f5f7] hover:bg-white/[0.08] transition-colors disabled:opacity-40 cursor-pointer"
             title="Refresh Vercel deployments"
           >
-            <ArrowsClockwiseIcon className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-[#e5a93c]' : ''}`} />
+            <ArrowsClockwiseIcon
+              className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-[#e5a93c]' : ''}`}
+            />
           </button>
         )}
       </div>
@@ -94,7 +96,9 @@ export const PulseFeed: React.FC<PulseFeedProps> = ({
                 disabled={isSyncing}
                 className="w-full py-1.5 px-3 rounded-full bg-white/[0.08] hover:bg-white/[0.14] border border-white/[0.08] text-[12px] font-medium text-[#f5f5f7] flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
               >
-                <ArrowsClockwiseIcon className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-[#e5a93c]' : ''}`} />
+                <ArrowsClockwiseIcon
+                  className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-[#e5a93c]' : ''}`}
+                />
                 <span>{isSyncing ? 'Syncing...' : 'Sync Deployments'}</span>
               </button>
             )}

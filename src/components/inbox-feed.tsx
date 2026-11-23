@@ -1,12 +1,12 @@
-import React, { useMemo, useState, useEffect } from 'react';
 import {
-  Trash as TrashIcon,
   Check as CheckIcon,
   CheckSquare as CheckSquareIcon,
   Checks as ChecksIcon,
+  Trash as TrashIcon,
   X as XIcon,
 } from '@phosphor-icons/react';
-import type { EmailThread, EmailCategoryTab } from '../types';
+import React, { useEffect, useMemo, useState } from 'react';
+import type { EmailCategoryTab, EmailThread } from '../types';
 
 interface InboxFeedProps {
   emails: EmailThread[];
@@ -75,8 +75,7 @@ export const InboxFeed: React.FC<InboxFeedProps> = ({
   const [isSelectMode, setIsSelectMode] = useState<boolean>(false);
 
   // Categorize emails (supports both Gmail categories and legacy tags)
-  const isPrimary = (e: EmailThread) =>
-    e.category === 'Primary' || e.category === 'Action';
+  const isPrimary = (e: EmailThread) => e.category === 'Primary' || e.category === 'Action';
   const isUpdates = (e: EmailThread) =>
     e.category === 'Updates' || e.category === 'Dev' || e.category === 'Receipt';
 
@@ -118,7 +117,8 @@ export const InboxFeed: React.FC<InboxFeedProps> = ({
 
   const handleToggleSelectAll = () => {
     const displayedIdList = displayedEmails.map((e) => e.id);
-    const allSelected = displayedIdList.length > 0 && displayedIdList.every((id) => selectedIds.has(id));
+    const allSelected =
+      displayedIdList.length > 0 && displayedIdList.every((id) => selectedIds.has(id));
     if (allSelected) {
       setSelectedIds(new Set());
     } else {
@@ -165,7 +165,12 @@ export const InboxFeed: React.FC<InboxFeedProps> = ({
             </button>
           )}
           <span className="font-mono text-[10.5px] text-[#d1d1d6] whitespace-nowrap">
-            {displayedEmails.length} {categoryTab === 'All' ? (displayedEmails.length === 1 ? 'msg' : 'msgs') : `in ${categoryTab}`}
+            {displayedEmails.length}{' '}
+            {categoryTab === 'All'
+              ? displayedEmails.length === 1
+                ? 'msg'
+                : 'msgs'
+              : `in ${categoryTab}`}
           </span>
         </div>
 
@@ -191,7 +196,9 @@ export const InboxFeed: React.FC<InboxFeedProps> = ({
             {primaryUnread > 0 ? (
               <span className="w-1.5 h-1.5 rounded-full bg-[#e5a93c]" />
             ) : (
-              <span className="text-[9.5px] text-[#636366] font-mono">({primaryEmails.length})</span>
+              <span className="text-[9.5px] text-[#636366] font-mono">
+                ({primaryEmails.length})
+              </span>
             )}
           </button>
 
@@ -207,7 +214,9 @@ export const InboxFeed: React.FC<InboxFeedProps> = ({
             {updatesUnread > 0 ? (
               <span className="w-1.5 h-1.5 rounded-full bg-[#e5a93c]" />
             ) : (
-              <span className="text-[9.5px] text-[#636366] font-mono">({updatesEmails.length})</span>
+              <span className="text-[9.5px] text-[#636366] font-mono">
+                ({updatesEmails.length})
+              </span>
             )}
           </button>
 
@@ -233,14 +242,12 @@ export const InboxFeed: React.FC<InboxFeedProps> = ({
             <button
               onClick={handleToggleSelectAll}
               className={`w-6 h-6 rounded flex items-center justify-center transition-colors cursor-pointer ${
-                displayedEmails.length > 0 &&
-                displayedEmails.every((e) => selectedIds.has(e.id))
+                displayedEmails.length > 0 && displayedEmails.every((e) => selectedIds.has(e.id))
                   ? 'bg-[#e5a93c]/20 text-[#e5a93c]'
                   : 'text-[#8e8e93] hover:text-[#f5f5f7] hover:bg-white/[0.06]'
               }`}
               title={
-                displayedEmails.length > 0 &&
-                displayedEmails.every((e) => selectedIds.has(e.id))
+                displayedEmails.length > 0 && displayedEmails.every((e) => selectedIds.has(e.id))
                   ? 'Deselect all'
                   : 'Select all'
               }
@@ -248,8 +255,7 @@ export const InboxFeed: React.FC<InboxFeedProps> = ({
               <CheckSquareIcon
                 className="w-4 h-4"
                 weight={
-                  displayedEmails.length > 0 &&
-                  displayedEmails.every((e) => selectedIds.has(e.id))
+                  displayedEmails.length > 0 && displayedEmails.every((e) => selectedIds.has(e.id))
                     ? 'fill'
                     : 'regular'
                 }
@@ -331,8 +337,8 @@ export const InboxFeed: React.FC<InboxFeedProps> = ({
                   isMultiSelected
                     ? 'bg-[#e5a93c]/15 text-[#f5f5f7] ring-1 ring-[#e5a93c]/30'
                     : isSelected
-                    ? 'bg-white/[0.12] text-[#f5f5f7]'
-                    : 'hover:bg-white/[0.05] text-[#d1d1d6]'
+                      ? 'bg-white/[0.12] text-[#f5f5f7]'
+                      : 'hover:bg-white/[0.05] text-[#d1d1d6]'
                 }`}
               >
                 <div className="flex items-center justify-between gap-2 mb-0.5">

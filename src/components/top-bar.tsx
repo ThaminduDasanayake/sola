@@ -1,14 +1,14 @@
-import React, { useState } from 'react';
 import {
+  ArrowsClockwise as ArrowsClockwiseIcon,
+  CaretDown as CaretDownIcon,
+  Check as CheckIcon,
   MagnifyingGlass as MagnifyingGlassIcon,
   Plus as PlusIcon,
   SidebarSimple as SidebarSimpleIcon,
-  ArrowsClockwise as ArrowsClockwiseIcon,
-  UserCircle as UserCircleIcon,
-  CaretDown as CaretDownIcon,
   Tray as TrayIcon,
-  Check as CheckIcon,
+  UserCircle as UserCircleIcon,
 } from '@phosphor-icons/react';
+import React, { useState } from 'react';
 import type { ActiveTab } from '../types';
 
 interface TopBarProps {
@@ -70,7 +70,9 @@ export const TopBar: React.FC<TopBarProps> = ({
                 className="w-7 h-7 rounded-full bg-white/[0.08] border border-white/[0.06] hover:bg-white/[0.14] flex items-center justify-center text-white/90 transition-colors shadow-sm disabled:opacity-50"
                 title={`Sync Inbox (${isSyncing ? 'Syncing...' : `Last: ${lastSyncText || 'Never'}`})`}
               >
-                <ArrowsClockwiseIcon className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-[#e5a93c]' : ''}`} />
+                <ArrowsClockwiseIcon
+                  className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-[#e5a93c]' : ''}`}
+                />
               </button>
               {lastSyncText && (
                 <span
@@ -98,19 +100,14 @@ export const TopBar: React.FC<TopBarProps> = ({
                   weight={selectedAccount !== 'all' ? 'fill' : 'regular'}
                 />
                 <span className="text-[11px] whitespace-nowrap">
-                  {selectedAccount === 'all'
-                    ? 'All Inboxes'
-                    : selectedAccount}
+                  {selectedAccount === 'all' ? 'All Inboxes' : selectedAccount}
                 </span>
                 <CaretDownIcon className="w-2.5 h-2.5 text-[#8e8e93]" />
               </button>
 
               {isAccountMenuOpen && (
                 <>
-                  <div
-                    className="fixed inset-0 z-40"
-                    onClick={() => setIsAccountMenuOpen(false)}
-                  />
+                  <div className="fixed inset-0 z-40" onClick={() => setIsAccountMenuOpen(false)} />
                   <div className="absolute left-0 mt-1.5 min-w-[260px] max-w-xs bg-[#222224] border border-white/10 rounded-xl shadow-2xl p-1 z-50 animate-in fade-in zoom-in-95 duration-100">
                     <div className="px-2.5 py-1.5 text-[10px] font-semibold text-[#8e8e93] uppercase tracking-wider">
                       Switch Mailbox
@@ -144,9 +141,7 @@ export const TopBar: React.FC<TopBarProps> = ({
                       </div>
                     </button>
 
-                    {accounts.length > 0 && (
-                      <div className="my-1 border-t border-white/[0.06]" />
-                    )}
+                    {accounts.length > 0 && <div className="my-1 border-t border-white/[0.06]" />}
 
                     {/* User Accounts list */}
                     {accounts.map((acc) => {
@@ -166,7 +161,10 @@ export const TopBar: React.FC<TopBarProps> = ({
                           }`}
                         >
                           <div className="flex items-center gap-2 truncate">
-                            <UserCircleIcon className="w-4 h-4 text-[#e5a93c] shrink-0" weight="fill" />
+                            <UserCircleIcon
+                              className="w-4 h-4 text-[#e5a93c] shrink-0"
+                              weight="fill"
+                            />
                             <span className="truncate text-left">{acc}</span>
                           </div>
                           <div className="flex items-center gap-1.5 shrink-0">
@@ -197,10 +195,7 @@ export const TopBar: React.FC<TopBarProps> = ({
       </div>
 
       {/* Center: Apple-style full-rounded Pill Search Bar */}
-      <div
-        className="flex-1 max-w-xs mx-auto"
-        onMouseDown={(e) => e.stopPropagation()}
-      >
+      <div className="flex-1 max-w-xs mx-auto" onMouseDown={(e) => e.stopPropagation()}>
         <div className="relative flex items-center">
           <MagnifyingGlassIcon className="w-3.5 h-3.5 absolute left-3 text-[#8e8e93] pointer-events-none" />
           <input
@@ -218,18 +213,13 @@ export const TopBar: React.FC<TopBarProps> = ({
               ×
             </button>
           ) : (
-            <kbd className="absolute right-2.5 text-[10px] text-[#636366] font-mono">
-              ⌘K
-            </kbd>
+            <kbd className="absolute right-2.5 text-[10px] text-[#636366] font-mono">⌘K</kbd>
           )}
         </div>
       </div>
 
       {/* Right side: Action buttons */}
-      <div
-        className="flex items-center gap-1.5 shrink-0"
-        onMouseDown={(e) => e.stopPropagation()}
-      >
+      <div className="flex items-center gap-1.5 shrink-0" onMouseDown={(e) => e.stopPropagation()}>
         <button
           onClick={onOpenQuickAdd}
           className="w-7 h-7 rounded-full bg-white/[0.08] border border-white/[0.06] hover:bg-white/[0.14] flex items-center justify-center text-white/90 transition-colors shadow-sm"

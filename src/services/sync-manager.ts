@@ -1,5 +1,5 @@
-import { syncGmail } from './db';
 import type { EmailThread } from '../types';
+import { syncGmail } from './db';
 
 type SyncListener = (isSyncing: boolean, lastSyncTime: number | null) => void;
 
@@ -78,7 +78,8 @@ class SyncManager {
 
     try {
       const emails = await syncGmail(limit);
-      const saved = typeof window !== 'undefined' ? localStorage.getItem('sola_last_sync_time') : null;
+      const saved =
+        typeof window !== 'undefined' ? localStorage.getItem('sola_last_sync_time') : null;
       if (saved) {
         this.lastSyncTime = parseInt(saved, 10);
       }
@@ -101,15 +102,7 @@ class SyncManager {
     }
 
     const now = new Date();
-    const next530 = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate(),
-      5,
-      30,
-      0,
-      0
-    );
+    const next530 = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 5, 30, 0, 0);
 
     // If 5:30 AM has already passed today, target tomorrow's 5:30 AM
     if (now.getTime() >= next530.getTime()) {
@@ -117,7 +110,9 @@ class SyncManager {
     }
 
     const msUntil530 = next530.getTime() - now.getTime();
-    console.info(`Next 5:30 AM auto-sync scheduled in ${Math.round(msUntil530 / 1000 / 60)} minutes.`);
+    console.info(
+      `Next 5:30 AM auto-sync scheduled in ${Math.round(msUntil530 / 1000 / 60)} minutes.`
+    );
 
     this.timerId = setTimeout(async () => {
       console.info('Running scheduled 5:30 AM morning email auto-sync...');

@@ -7,11 +7,7 @@ interface VaultFeedProps {
   onSelect: (bookmark: Bookmark) => void;
 }
 
-export const VaultFeed: React.FC<VaultFeedProps> = ({
-  bookmarks,
-  selectedId,
-  onSelect,
-}) => {
+export const VaultFeed: React.FC<VaultFeedProps> = ({ bookmarks, selectedId, onSelect }) => {
   if (bookmarks.length === 0) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-8 text-center select-none">
@@ -34,15 +30,11 @@ export const VaultFeed: React.FC<VaultFeedProps> = ({
             key={item.id}
             onClick={() => onSelect(item)}
             className={`px-3 py-2.5 rounded-xl cursor-pointer transition-colors ${
-              isSelected
-                ? 'bg-white/[0.12] text-[#f5f5f7]'
-                : 'hover:bg-white/[0.05] text-[#d1d1d6]'
+              isSelected ? 'bg-white/[0.12] text-[#f5f5f7]' : 'hover:bg-white/[0.05] text-[#d1d1d6]'
             }`}
           >
             <div className="flex items-center justify-between gap-2 mb-0.5">
-              <span className="text-[11px] font-medium truncate text-[#e5a93c]">
-                {host}
-              </span>
+              <span className="text-[11px] font-medium truncate text-[#e5a93c]">{host}</span>
               <span className="text-[11px] shrink-0 text-[#8e8e93]">
                 {new Date(item.created_at).toLocaleDateString([], {
                   month: 'short',

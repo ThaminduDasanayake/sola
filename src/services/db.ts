@@ -1,5 +1,5 @@
-import Database from '@tauri-apps/plugin-sql';
 import { invoke } from '@tauri-apps/api/core';
+import Database from '@tauri-apps/plugin-sql';
 import type { Bookmark, EmailThread, ProjectTelemetry } from '../types';
 
 let dbInstance: Database | null = null;
@@ -151,7 +151,13 @@ export async function addBookmark(item: Omit<Bookmark, 'id' | 'created_at'>): Pr
     try {
       const res = await db.execute(
         `INSERT INTO bookmarks (url, title, description, tags, ai_notes) VALUES (?, ?, ?, ?, ?)`,
-        [item.url, item.title, item.description || '', JSON.stringify(item.tags || []), item.ai_notes || '']
+        [
+          item.url,
+          item.title,
+          item.description || '',
+          JSON.stringify(item.tags || []),
+          item.ai_notes || '',
+        ]
       );
       if (res.lastInsertId !== undefined) {
         newBookmark.id = res.lastInsertId;
@@ -175,12 +181,12 @@ export async function fetchEmails(): Promise<EmailThread[]> {
   const db = await getDb();
   if (db) {
     try {
-      const rows = await db.select<any[]>(
-        `SELECT * FROM emails ORDER BY received_at DESC`
-      );
+      const rows = await db.select<any[]>(`SELECT * FROM emails ORDER BY received_at DESC`);
       if (rows && rows.length > 0) {
         const mapped: EmailThread[] = rows
-          .filter((r) => r.category !== 'Promotions' && r.category !== 'Social' && r.category !== 'Forums')
+          .filter(
+            (r) => r.category !== 'Promotions' && r.category !== 'Social' && r.category !== 'Forums'
+          )
           .map((r) => ({
             id: r.id,
             thread_id: r.thread_id,
@@ -386,10 +392,10 @@ export async function deleteEmails(ids: string[]): Promise<void> {
       await db.execute(`DELETE FROM emails WHERE id IN (${placeholders})`, ids);
       const now = new Date().toISOString();
       for (const id of ids) {
-        await db.execute(
-          'INSERT OR REPLACE INTO deleted_emails (id, deleted_at) VALUES (?, ?)',
-          [id, now]
-        );
+        await db.execute('INSERT OR REPLACE INTO deleted_emails (id, deleted_at) VALUES (?, ?)', [
+          id,
+          now,
+        ]);
       }
     } catch (e) {
       console.warn('Failed to delete emails from SQLite:', e);
@@ -421,7 +427,10 @@ export async function syncGmail(limit?: number): Promise<EmailThread[]> {
   }
 
   try {
-    const savedLimit = typeof window !== 'undefined' ? parseInt(localStorage.getItem('sola_email_limit') || '40', 10) : 40;
+    const savedLimit =
+      typeof window !== 'undefined'
+        ? parseInt(localStorage.getItem('sola_email_limit') || '40', 10)
+        : 40;
     const fetchLimit = limit ?? savedLimit;
     const deletedIds = await fetchDeletedEmailIds();
     const fetched = await invoke<any[]>('sync_gmail_emails', {
@@ -448,7 +457,9 @@ export async function syncGmail(limit?: number): Promise<EmailThread[]> {
 
       const combined = [...fetched, ...preservedOtherAccounts];
       // Sort newest first
-      combined.sort((a, b) => new Date(b.received_at).getTime() - new Date(a.received_at).getTime());
+      combined.sort(
+        (a, b) => new Date(b.received_at).getTime() - new Date(a.received_at).getTime()
+      );
       memoryEmails = combined;
 
       // Always save to localStorage offline snapshot

@@ -96,12 +96,14 @@ CREATE TABLE IF NOT EXISTS projects (
 ### Phase 1: Project Scaffold & macOS Window Polish (Days 1–2)
 
 1. **Initialize Tauri v2 + React + TypeScript:**
+
    ```bash
    pnpm create tauri-app command-center --template react-ts
    cd command-center
    pnpm install
    ```
 2. **Install Essential Tauri Plugins:**
+
    ```bash
    pnpm tauri add sql global-shortcut notification http os
    ```
@@ -115,6 +117,7 @@ CREATE TABLE IF NOT EXISTS projects (
 1. **Register Global Shortcut:** Bind `Cmd + Shift + Space` to toggle window visibility and `Cmd + Shift + S` to quick-save a URL from your clipboard.
 2. **Build Metadata Scraper & AI Tagger:** When a URL is saved, fetch the HTML `<title>` and `<meta name="description">`, pass it to Gemini with a Zod schema to generate 3–5 clean tags, and save to SQLite.
 3. **Wire Up Text-to-Speech:**
+
    ```typescript
    export function speakText(text: string, rate = 1.05) {
      window.speechSynthesis.cancel();

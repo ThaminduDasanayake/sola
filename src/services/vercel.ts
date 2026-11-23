@@ -57,7 +57,8 @@ interface RawVercelProject {
  */
 function extractPermanentSiteUrl(p: RawVercelProject): string {
   // 1. Check production deployment's alias list
-  const prodDep = p.latestDeployments?.find((d) => d.target === 'production') || p.targets?.production;
+  const prodDep =
+    p.latestDeployments?.find((d) => d.target === 'production') || p.targets?.production;
   if (prodDep?.alias && Array.isArray(prodDep.alias) && prodDep.alias.length > 0) {
     const custom = prodDep.alias.find((a) => typeof a === 'string' && !a.endsWith('.vercel.app'));
     const chosen = custom || prodDep.alias[0];
@@ -97,9 +98,15 @@ export class VercelService {
    * Retrieves the current Vercel credentials.
    * Checks localStorage override first, then falls back to .env loaded by Tauri backend.
    */
-  async getCredentials(): Promise<{ token: string | null; teamId: string | null; isFromEnv: boolean }> {
-    const localToken = typeof window !== 'undefined' ? localStorage.getItem('sola_vercel_token') : null;
-    const localTeam = typeof window !== 'undefined' ? localStorage.getItem('sola_vercel_team_id') : null;
+  async getCredentials(): Promise<{
+    token: string | null;
+    teamId: string | null;
+    isFromEnv: boolean;
+  }> {
+    const localToken =
+      typeof window !== 'undefined' ? localStorage.getItem('sola_vercel_token') : null;
+    const localTeam =
+      typeof window !== 'undefined' ? localStorage.getItem('sola_vercel_team_id') : null;
 
     if (localToken && localToken.trim().length > 0) {
       return {
@@ -110,7 +117,9 @@ export class VercelService {
     }
 
     try {
-      const envConfig = await invoke<{ token: string | null; team_id: string | null }>('get_vercel_credentials');
+      const envConfig = await invoke<{ token: string | null; team_id: string | null }>(
+        'get_vercel_credentials'
+      );
       if (envConfig && envConfig.token && envConfig.token.trim().length > 0) {
         return {
           token: envConfig.token.trim(),
@@ -128,7 +137,10 @@ export class VercelService {
   /**
    * Validates a token and fetches basic user profile info.
    */
-  async verifyToken(token: string, teamId?: string | null): Promise<{ valid: boolean; name?: string; error?: string }> {
+  async verifyToken(
+    token: string,
+    teamId?: string | null
+  ): Promise<{ valid: boolean; name?: string; error?: string }> {
     try {
       const url = new URL('https://api.vercel.com/v2/user');
       if (teamId) {
@@ -164,7 +176,11 @@ export class VercelService {
   /**
    * Fetches projects from Vercel, normalizes their status, and caches in SQLite.
    */
-  async syncProjects(): Promise<{ success: boolean; projects: ProjectTelemetry[]; error?: string }> {
+  async syncProjects(): Promise<{
+    success: boolean;
+    projects: ProjectTelemetry[];
+    error?: string;
+  }> {
     const { token, teamId } = await this.getCredentials();
 
     if (!token) {
@@ -201,8 +217,7 @@ export class VercelService {
       const normalized: ProjectTelemetry[] = rawProjects.map((p, idx) => {
         const latest = p.latestDeployments?.[0];
         const prodDeployment =
-          p.latestDeployments?.find((d) => d.target === 'production') ||
-          p.targets?.production;
+          p.latestDeployments?.find((d) => d.target === 'production') || p.targets?.production;
 
         const latestState = (latest?.readyState || '').toUpperCase();
         const prodState = (prodDeployment?.readyState || '').toUpperCase();
@@ -210,7 +225,11 @@ export class VercelService {
         // Determine live site status
         let status: ProjectTelemetry['last_status'] = 'unknown';
 
-        if (latestState === 'BUILDING' || latestState === 'INITIALIZING' || latestState === 'QUEUED') {
+        if (
+          latestState === 'BUILDING' ||
+          latestState === 'INITIALIZING' ||
+          latestState === 'QUEUED'
+        ) {
           status = 'building';
         } else if (prodState === 'READY') {
           status = 'healthy';
@@ -227,26 +246,21 @@ export class VercelService {
         const permanentSiteUrl = extractPermanentSiteUrl(p);
 
         // Format temporary deployment preview URL
-        let deploymentUrl: string | undefined = undefined;
+        let deploymentUrl: string | undefined;
         if (latest?.url) {
           deploymentUrl = latest.url.startsWith('http') ? latest.url : `https://${latest.url}`;
         }
 
         // Format repo slug
-        let repoSlug: string | undefined = undefined;
+        let repoSlug: string | undefined;
         if (p.link?.repo) {
           repoSlug = p.link.org ? `${p.link.org}/${p.link.repo}` : p.link.repo;
         }
 
         // Commit information
         const commitMsg =
-          latest?.meta?.githubCommitMessage ||
-          latest?.meta?.commitMessage ||
-          undefined;
-        const commitBranch =
-          latest?.meta?.githubCommitRef ||
-          latest?.meta?.branch ||
-          undefined;
+          latest?.meta?.githubCommitMessage || latest?.meta?.commitMessage || undefined;
+        const commitBranch = latest?.meta?.githubCommitRef || latest?.meta?.branch || undefined;
         const commitAuthor =
           latest?.meta?.githubCommitAuthorName ||
           latest?.meta?.githubCommitAuthorLogin ||

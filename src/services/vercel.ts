@@ -120,7 +120,7 @@ export class VercelService {
       const envConfig = await invoke<{ token: string | null; team_id: string | null }>(
         'get_vercel_credentials'
       );
-      if (envConfig && envConfig.token && envConfig.token.trim().length > 0) {
+      if (envConfig?.token && envConfig.token.trim().length > 0) {
         return {
           token: envConfig.token.trim(),
           teamId: envConfig.team_id?.trim() || null,
@@ -214,6 +214,29 @@ export class VercelService {
       const data = await res.json();
       const rawProjects: RawVercelProject[] = data.projects || [];
 
+      // Fetch the true authoritative project domains from /v9/projects/{id}/domains in parallel
+      const projectDomains = await Promise.all(
+        rawProjects.map(async (p) => {
+          try {
+            const domUrl = new URL(`https://api.vercel.com/v9/projects/${p.id}/domains`);
+            if (teamId) domUrl.searchParams.set('teamId', teamId);
+            const domRes = await fetch(domUrl.toString(), {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                Accept: 'application/json',
+              },
+            });
+            if (domRes.ok) {
+              const domData = await domRes.json();
+              return (domData.domains || []) as Array<{ name: string; verified?: boolean }>;
+            }
+          } catch (e) {
+            console.warn(`Could not fetch domains for project ${p.name}:`, e);
+          }
+          return [] as Array<{ name: string; verified?: boolean }>;
+        })
+      );
+
       const normalized: ProjectTelemetry[] = rawProjects.map((p, idx) => {
         const latest = p.latestDeployments?.[0];
         const prodDeployment =
@@ -242,8 +265,18 @@ export class VercelService {
           status = prodState === 'READY' ? 'healthy' : 'warning';
         }
 
-        // Format permanent site URL (never temporary or canceled)
-        const permanentSiteUrl = extractPermanentSiteUrl(p);
+        // Extract the authoritative permanent domain from /v9/projects/{id}/domains
+        const assignedDomains = projectDomains[idx] || [];
+        const customApexDomain = assignedDomains.find(
+          (d) => d.name && !d.name.endsWith('.vercel.app')
+        );
+        const primaryVercelDomain = assignedDomains[0]?.name;
+        const bestDomain =
+          customApexDomain?.name || primaryVercelDomain || extractPermanentSiteUrl(p);
+
+        const permanentSiteUrl = bestDomain.startsWith('http')
+          ? bestDomain
+          : `https://${bestDomain}`;
 
         // Format temporary deployment preview URL
         let deploymentUrl: string | undefined;

@@ -199,14 +199,30 @@ export function App() {
         });
       }
 
-      // If local projects are empty and we're online, attempt background Vercel sync
-      if (pList.length === 0 && typeof navigator !== 'undefined' && navigator.onLine) {
+      // If local projects are empty OR have legacy ephemeral deployment hash URLs instead of real domains,
+      // trigger an automatic background Vercel sync to upgrade to authoritative domains
+      const hasOldDeploymentUrl = pList.some(
+        (p) =>
+          !p.live_url ||
+          p.live_url.includes('-git-') ||
+          /[a-z0-9]{8,}\.vercel\.app/.test(p.live_url)
+      );
+      if (
+        (pList.length === 0 || hasOldDeploymentUrl) &&
+        typeof navigator !== 'undefined' &&
+        navigator.onLine
+      ) {
         vercelService
           .syncProjects()
           .then((res) => {
             if (res.success && res.projects.length > 0) {
               setProjects(res.projects);
-              setSelectedProject((prev) => prev || res.projects[0]);
+              setSelectedProject((prev) => {
+                if (prev) {
+                  return res.projects.find((p) => p.id === prev.id) || res.projects[0];
+                }
+                return res.projects[0];
+              });
             }
           })
           .catch(() => {});

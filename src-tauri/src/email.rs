@@ -176,39 +176,14 @@ pub fn parse_email_message(
     full_msg.extend_from_slice(b"\r\n\r\n");
     full_msg.extend_from_slice(body_bytes);
 
-    let (subject, from, date_str, message_id, clean_body, body_html) = if let Ok(parsed_mail) = mailparse::parse_mail(&full_msg) {
-        let mut subject = String::from("(No Subject)");
-        let mut from = String::from("Unknown");
-        let mut date_str = String::new();
-        let mut message_id = format!("uid-{}", uid);
+    let (subject, from, date_str, message_id, clean_body, body_html) =
+        if let Ok(parsed_mail) = mailparse::parse_mail(&full_msg) {
+            let mut subject = String::from("(No Subject)");
+            let mut from = String::from("Unknown");
+            let mut date_str = String::new();
+            let mut message_id = format!("uid-{}", uid);
 
-        for header in &parsed_mail.headers {
-            match header.get_key().to_lowercase().as_str() {
-                "subject" => subject = header.get_value(),
-                "from" => from = header.get_value(),
-                "date" => date_str = header.get_value(),
-                "message-id" => {
-                    let val = header.get_value();
-                    if !val.trim().is_empty() {
-                        message_id = val.trim().to_string();
-                    }
-                }
-                _ => {}
-            }
-        }
-
-        let body = extract_clean_body(&parsed_mail);
-        let html = extract_html_body(&parsed_mail);
-        (subject, from, date_str, message_id, body, html)
-    } else {
-        let parsed_headers = mailparse::parse_mail(header_bytes).ok();
-        let mut subject = String::from("(No Subject)");
-        let mut from = String::from("Unknown");
-        let mut date_str = String::new();
-        let mut message_id = format!("uid-{}", uid);
-
-        if let Some(h) = parsed_headers {
-            for header in h.headers {
+            for header in &parsed_mail.headers {
                 match header.get_key().to_lowercase().as_str() {
                     "subject" => subject = header.get_value(),
                     "from" => from = header.get_value(),
@@ -222,11 +197,37 @@ pub fn parse_email_message(
                     _ => {}
                 }
             }
-        }
 
-        let raw = String::from_utf8_lossy(body_bytes);
-        (subject, from, date_str, message_id, raw.to_string(), None)
-    };
+            let body = extract_clean_body(&parsed_mail);
+            let html = extract_html_body(&parsed_mail);
+            (subject, from, date_str, message_id, body, html)
+        } else {
+            let parsed_headers = mailparse::parse_mail(header_bytes).ok();
+            let mut subject = String::from("(No Subject)");
+            let mut from = String::from("Unknown");
+            let mut date_str = String::new();
+            let mut message_id = format!("uid-{}", uid);
+
+            if let Some(h) = parsed_headers {
+                for header in h.headers {
+                    match header.get_key().to_lowercase().as_str() {
+                        "subject" => subject = header.get_value(),
+                        "from" => from = header.get_value(),
+                        "date" => date_str = header.get_value(),
+                        "message-id" => {
+                            let val = header.get_value();
+                            if !val.trim().is_empty() {
+                                message_id = val.trim().to_string();
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+            }
+
+            let raw = String::from_utf8_lossy(body_bytes);
+            (subject, from, date_str, message_id, raw.to_string(), None)
+        };
 
     let clean_snippet = {
         let cleaned_lines: Vec<&str> = clean_body
@@ -253,7 +254,14 @@ pub fn parse_email_message(
         }
     };
 
-    (subject, from, date_str, message_id, clean_snippet, body_html)
+    (
+        subject,
+        from,
+        date_str,
+        message_id,
+        clean_snippet,
+        body_html,
+    )
 }
 
 pub fn categorize_email(from: &str, subject: &str) -> String {
@@ -318,10 +326,9 @@ pub fn fetch_account_emails(
         .next()
         .ok_or_else(|| "No IP addresses found for imap.gmail.com".to_string())?;
 
-    let stream = std::net::TcpStream::connect_timeout(
-        &socket_addr,
-        std::time::Duration::from_secs(8),
-    ).map_err(|e| format!("Failed to connect to imap.gmail.com: {}", e))?;
+    let stream =
+        std::net::TcpStream::connect_timeout(&socket_addr, std::time::Duration::from_secs(8))
+            .map_err(|e| format!("Failed to connect to imap.gmail.com: {}", e))?;
 
     let _ = stream.set_read_timeout(Some(std::time::Duration::from_secs(12)));
     let _ = stream.set_write_timeout(Some(std::time::Duration::from_secs(12)));
@@ -437,7 +444,10 @@ pub fn fetch_account_emails(
                     continue;
                 }
 
-                let is_seen = msg.flags().iter().any(|f| matches!(f, imap::types::Flag::Seen));
+                let is_seen = msg
+                    .flags()
+                    .iter()
+                    .any(|f| matches!(f, imap::types::Flag::Seen));
 
                 let item = EmailItem {
                     id: message_id,
@@ -501,7 +511,10 @@ pub fn fetch_account_emails(
                 continue;
             }
 
-            let is_seen = msg.flags().iter().any(|f| matches!(f, imap::types::Flag::Seen));
+            let is_seen = msg
+                .flags()
+                .iter()
+                .any(|f| matches!(f, imap::types::Flag::Seen));
 
             let item = EmailItem {
                 id: message_id,
@@ -555,19 +568,14 @@ pub async fn sync_gmail_emails(
     let _ = dotenvy::from_filename("../.env");
 
     let fetch_limit = limit.unwrap_or(40);
-    let deleted_set: std::collections::HashSet<String> = deleted_ids
-        .unwrap_or_default()
-        .into_iter()
-        .collect();
+    let deleted_set: std::collections::HashSet<String> =
+        deleted_ids.unwrap_or_default().into_iter().collect();
 
     let mut all_emails = Vec::new();
     let mut errors = Vec::new();
 
     // Account 1
-    if let (Ok(email), Ok(pass)) = (
-        env::var("GMAIL_1_EMAIL"),
-        env::var("GMAIL_1_APP_PASSWORD"),
-    ) {
+    if let (Ok(email), Ok(pass)) = (env::var("GMAIL_1_EMAIL"), env::var("GMAIL_1_APP_PASSWORD")) {
         if !email.trim().is_empty() && !pass.trim().is_empty() {
             match fetch_account_emails(email.trim(), pass.trim(), fetch_limit, &deleted_set) {
                 Ok(mut list) => all_emails.append(&mut list),
@@ -580,10 +588,7 @@ pub async fn sync_gmail_emails(
     }
 
     // Account 2
-    if let (Ok(email), Ok(pass)) = (
-        env::var("GMAIL_2_EMAIL"),
-        env::var("GMAIL_2_APP_PASSWORD"),
-    ) {
+    if let (Ok(email), Ok(pass)) = (env::var("GMAIL_2_EMAIL"), env::var("GMAIL_2_APP_PASSWORD")) {
         if !email.trim().is_empty() && !pass.trim().is_empty() {
             match fetch_account_emails(email.trim(), pass.trim(), fetch_limit, &deleted_set) {
                 Ok(mut list) => all_emails.append(&mut list),
@@ -599,7 +604,10 @@ pub async fn sync_gmail_emails(
         if !errors.is_empty() {
             return Err(errors.join(" | "));
         }
-        return Err("No Gmail accounts configured in .env. Check GMAIL_1_EMAIL and GMAIL_1_APP_PASSWORD.".to_string());
+        return Err(
+            "No Gmail accounts configured in .env. Check GMAIL_1_EMAIL and GMAIL_1_APP_PASSWORD."
+                .to_string(),
+        );
     }
 
     Ok(all_emails)

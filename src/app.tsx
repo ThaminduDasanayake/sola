@@ -207,6 +207,20 @@ export function App() {
     });
   };
 
+  const backfillTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const triggerDebouncedBackfill = () => {
+    if (typeof navigator !== 'undefined' && !navigator.onLine) return;
+    if (backfillTimeoutRef.current) {
+      clearTimeout(backfillTimeoutRef.current);
+    }
+    backfillTimeoutRef.current = setTimeout(() => {
+      syncManager.triggerSync().catch((err) => {
+        console.warn('Backfill sync error:', err);
+      });
+    }, 1500);
+  };
+
   const handleConfirmDelete = async () => {
     if (!deleteConfirm || deleteConfirm.ids.length === 0) return;
     setIsDeletingEmail(true);
@@ -221,9 +235,7 @@ export function App() {
       }
       await deleteEmails(ids);
       setDeleteConfirm(null);
-      syncManager.triggerSync().catch((err) => {
-        console.warn('Backfill sync error:', err);
-      });
+      triggerDebouncedBackfill();
     } finally {
       setIsDeletingEmail(false);
     }

@@ -292,6 +292,12 @@ export async function revealDatabaseInFinder(): Promise<void> {
 }
 
 export async function syncGmail(limit?: number): Promise<EmailThread[]> {
+  // If navigator reports offline, do NOT attempt network IMAP calls!
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    console.info('Device is offline. Skipping IMAP network sync and returning local emails.');
+    return fetchEmails();
+  }
+
   try {
     const savedLimit = typeof window !== 'undefined' ? parseInt(localStorage.getItem('sola_email_limit') || '40', 10) : 40;
     const fetchLimit = limit ?? savedLimit;
@@ -310,14 +316,23 @@ export async function syncGmail(limit?: number): Promise<EmailThread[]> {
           item.received_at = new Date(item.received_at).toISOString();
         }
       });
+
+      // Preserve existing emails for any configured accounts that were not part of this partial fetch
+      const fetchedAccounts = new Set(fetched.map((f) => f.account_email).filter(Boolean));
+      const existingEmails = await fetchEmails();
+      const preservedOtherAccounts = existingEmails.filter(
+        (e) => e.account_email && !fetchedAccounts.has(e.account_email)
+      );
+
+      const combined = [...fetched, ...preservedOtherAccounts];
       // Sort newest first
-      fetched.sort((a, b) => new Date(b.received_at).getTime() - new Date(a.received_at).getTime());
-      memoryEmails = fetched;
+      combined.sort((a, b) => new Date(b.received_at).getTime() - new Date(a.received_at).getTime());
+      memoryEmails = combined;
 
       // Always save to localStorage offline snapshot
       if (typeof window !== 'undefined') {
         try {
-          localStorage.setItem('sola_cached_emails', JSON.stringify(fetched));
+          localStorage.setItem('sola_cached_emails', JSON.stringify(combined));
         } catch {}
       }
 
@@ -330,6 +345,13 @@ export async function syncGmail(limit?: number): Promise<EmailThread[]> {
           );
         } catch (e) {
           console.warn('Could not prune non-primary categories:', e);
+        }
+
+        // Remove old records only for accounts that were refreshed so deletions take effect
+        for (const acc of fetchedAccounts) {
+          try {
+            await db.execute('DELETE FROM emails WHERE account_email = ?', [acc]);
+          } catch {}
         }
 
         for (const item of fetched) {
@@ -355,11 +377,11 @@ export async function syncGmail(limit?: number): Promise<EmailThread[]> {
           }
         }
       }
-      return fetched;
+      return combined;
     }
   } catch (err) {
     console.warn('Gmail sync error (offline or network):', err);
-    // When offline without WiFi, do NOT throw and lose local emails! Return existing emails!
+    // When sync fails, NEVER wipe or clear the feed! Return existing local emails!
     const existing = await fetchEmails();
     if (existing.length > 0) {
       return existing;

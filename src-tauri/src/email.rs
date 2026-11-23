@@ -72,8 +72,24 @@ pub fn fetch_account_emails(
         .build()
         .map_err(|e| format!("TLS build error: {}", e))?;
 
-    let client = imap::connect(("imap.gmail.com", 993), "imap.gmail.com", &tls)
-        .map_err(|e| format!("Failed to connect to imap.gmail.com: {}", e))?;
+    let socket_addr = std::net::ToSocketAddrs::to_socket_addrs(&("imap.gmail.com", 993))
+        .map_err(|e| format!("DNS lookup failed for imap.gmail.com: {}", e))?
+        .next()
+        .ok_or_else(|| "No IP addresses found for imap.gmail.com".to_string())?;
+
+    let stream = std::net::TcpStream::connect_timeout(
+        &socket_addr,
+        std::time::Duration::from_secs(8),
+    ).map_err(|e| format!("Failed to connect to imap.gmail.com: {}", e))?;
+
+    let _ = stream.set_read_timeout(Some(std::time::Duration::from_secs(12)));
+    let _ = stream.set_write_timeout(Some(std::time::Duration::from_secs(12)));
+
+    let tls_stream = tls
+        .connect("imap.gmail.com", stream)
+        .map_err(|e| format!("TLS connection failed: {}", e))?;
+
+    let client = imap::Client::new(tls_stream);
 
     let mut session = client
         .login(email, &clean_password)
@@ -379,6 +395,7 @@ pub async fn sync_gmail_emails(
         .collect();
 
     let mut all_emails = Vec::new();
+    let mut errors = Vec::new();
 
     // Account 1
     if let (Ok(email), Ok(pass)) = (
@@ -388,7 +405,10 @@ pub async fn sync_gmail_emails(
         if !email.trim().is_empty() && !pass.trim().is_empty() {
             match fetch_account_emails(email.trim(), pass.trim(), fetch_limit, &deleted_set) {
                 Ok(mut list) => all_emails.append(&mut list),
-                Err(err) => eprintln!("Error fetching emails for {}: {}", email, err),
+                Err(err) => {
+                    eprintln!("Error fetching emails for {}: {}", email, err);
+                    errors.push(format!("{}: {}", email, err));
+                }
             }
         }
     }
@@ -401,13 +421,19 @@ pub async fn sync_gmail_emails(
         if !email.trim().is_empty() && !pass.trim().is_empty() {
             match fetch_account_emails(email.trim(), pass.trim(), fetch_limit, &deleted_set) {
                 Ok(mut list) => all_emails.append(&mut list),
-                Err(err) => eprintln!("Error fetching emails for {}: {}", email, err),
+                Err(err) => {
+                    eprintln!("Error fetching emails for {}: {}", email, err);
+                    errors.push(format!("{}: {}", email, err));
+                }
             }
         }
     }
 
     if all_emails.is_empty() {
-        return Err("No Gmail accounts configured in .env or login failed. Check .env for GMAIL_1_EMAIL and GMAIL_1_APP_PASSWORD.".to_string());
+        if !errors.is_empty() {
+            return Err(errors.join(" | "));
+        }
+        return Err("No Gmail accounts configured in .env. Check GMAIL_1_EMAIL and GMAIL_1_APP_PASSWORD.".to_string());
     }
 
     Ok(all_emails)

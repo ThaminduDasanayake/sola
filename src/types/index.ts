@@ -38,6 +38,7 @@ export interface ProjectTelemetry {
   last_commit_branch?: string;
   last_commit_author?: string;
   last_deployment_at?: string;
+  latest_build_state?: string;
   last_status: 'healthy' | 'building' | 'failed' | 'warning' | 'unknown';
   last_checked_at: string;
   open_prs?: number;

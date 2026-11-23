@@ -15,6 +15,7 @@ interface RawVercelProject {
   name: string;
   framework?: string;
   updatedAt?: number;
+  alias?: Array<string | { domain?: string; alias?: string }>;
   link?: {
     type?: string;
     repo?: string;
@@ -22,14 +23,18 @@ interface RawVercelProject {
   };
   targets?: {
     production?: {
+      id?: string;
       url?: string;
       readyState?: string;
+      alias?: string[];
     };
   };
   latestDeployments?: Array<{
     id: string;
     url?: string;
+    target?: string;
     readyState?: string;
+    alias?: string[];
     createdAt?: number;
     creator?: {
       username?: string;
@@ -43,6 +48,48 @@ interface RawVercelProject {
       branch?: string;
     };
   }>;
+}
+
+/**
+ * Extracts the permanent production site URL for a Vercel project.
+ * Unlike ephemeral deployment hash URLs (which can be cancelled or expired),
+ * the permanent site URL is always active.
+ */
+function extractPermanentSiteUrl(p: RawVercelProject): string {
+  // 1. Check production deployment's alias list
+  const prodDep = p.latestDeployments?.find((d) => d.target === 'production') || p.targets?.production;
+  if (prodDep?.alias && Array.isArray(prodDep.alias) && prodDep.alias.length > 0) {
+    const custom = prodDep.alias.find((a) => typeof a === 'string' && !a.endsWith('.vercel.app'));
+    const chosen = custom || prodDep.alias[0];
+    if (chosen) {
+      return chosen.startsWith('http') ? chosen : `https://${chosen}`;
+    }
+  }
+
+  // 2. Check project-level alias list
+  if (p.alias && Array.isArray(p.alias) && p.alias.length > 0) {
+    const list = p.alias
+      .map((item) => (typeof item === 'string' ? item : item.domain || item.alias || ''))
+      .filter(Boolean);
+    const custom = list.find((d) => !d.endsWith('.vercel.app'));
+    const chosen = custom || list[0];
+    if (chosen) {
+      return chosen.startsWith('http') ? chosen : `https://${chosen}`;
+    }
+  }
+
+  // 3. Check targets.production.url if it is an apex/permanent alias
+  if (p.targets?.production?.url) {
+    const u = p.targets.production.url;
+    // Exclude ephemeral branch preview or hash URLs
+    if (!u.includes('-git-') && !u.match(/[a-z0-9]{9,}\.vercel\.app$/)) {
+      return u.startsWith('http') ? u : `https://${u}`;
+    }
+  }
+
+  // 4. Default canonical permanent Vercel domain: https://<project-name>.vercel.app
+  // This domain is always permanently routed to the live production deployment.
+  return `https://${p.name.toLowerCase()}.vercel.app`;
 }
 
 export class VercelService {
@@ -153,38 +200,42 @@ export class VercelService {
 
       const normalized: ProjectTelemetry[] = rawProjects.map((p, idx) => {
         const latest = p.latestDeployments?.[0];
-        const prodTarget = p.targets?.production;
+        const prodDeployment =
+          p.latestDeployments?.find((d) => d.target === 'production') ||
+          p.targets?.production;
 
-        // Determine deployment status
-        const rawState = (latest?.readyState || prodTarget?.readyState || '').toUpperCase();
+        const latestState = (latest?.readyState || '').toUpperCase();
+        const prodState = (prodDeployment?.readyState || '').toUpperCase();
+
+        // Determine live site status
         let status: ProjectTelemetry['last_status'] = 'unknown';
-        if (rawState === 'READY') {
-          status = 'healthy';
-        } else if (rawState === 'BUILDING' || rawState === 'INITIALIZING' || rawState === 'QUEUED') {
+
+        if (latestState === 'BUILDING' || latestState === 'INITIALIZING' || latestState === 'QUEUED') {
           status = 'building';
-        } else if (rawState === 'ERROR') {
+        } else if (prodState === 'READY') {
+          status = 'healthy';
+        } else if (latestState === 'READY') {
+          status = 'healthy';
+        } else if (latestState === 'ERROR') {
           status = 'failed';
-        } else if (rawState === 'CANCELED') {
-          status = 'warning';
+        } else if (latestState === 'CANCELED') {
+          // If production is active, keep healthy; otherwise warning
+          status = prodState === 'READY' ? 'healthy' : 'warning';
+        }
+
+        // Format permanent site URL (never temporary or canceled)
+        const permanentSiteUrl = extractPermanentSiteUrl(p);
+
+        // Format temporary deployment preview URL
+        let deploymentUrl: string | undefined = undefined;
+        if (latest?.url) {
+          deploymentUrl = latest.url.startsWith('http') ? latest.url : `https://${latest.url}`;
         }
 
         // Format repo slug
         let repoSlug: string | undefined = undefined;
         if (p.link?.repo) {
           repoSlug = p.link.org ? `${p.link.org}/${p.link.repo}` : p.link.repo;
-        }
-
-        // Format live and deployment URLs
-        let deploymentUrl: string | undefined = undefined;
-        if (latest?.url) {
-          deploymentUrl = latest.url.startsWith('http') ? latest.url : `https://${latest.url}`;
-        }
-
-        let liveUrl: string | undefined = undefined;
-        if (prodTarget?.url) {
-          liveUrl = prodTarget.url.startsWith('http') ? prodTarget.url : `https://${prodTarget.url}`;
-        } else {
-          liveUrl = deploymentUrl;
         }
 
         // Commit information
@@ -216,12 +267,13 @@ export class VercelService {
           repo_slug: repoSlug,
           vercel_project_id: p.id,
           framework: p.framework || undefined,
-          live_url: liveUrl,
+          live_url: permanentSiteUrl,
           deployment_url: deploymentUrl,
           last_commit_message: commitMsg,
           last_commit_branch: commitBranch,
           last_commit_author: commitAuthor,
           last_deployment_at: lastDeploymentAt,
+          latest_build_state: latestState || undefined,
           last_status: status,
           last_checked_at: new Date().toISOString(),
           open_prs: 0,

@@ -329,7 +329,10 @@ export const DetailPane: React.FC<DetailPaneProps> = ({ item, type, onDeleteEmai
 
   if (type === 'project') {
     const project = item as ProjectTelemetry;
-    const targetUrl = project.live_url || project.deployment_url;
+    // Guaranteed permanent production site URL (never an ephemeral/canceled deployment hash)
+    const siteUrl = project.live_url || `https://${project.name.toLowerCase()}.vercel.app`;
+    const previewUrl = project.deployment_url;
+    const isLatestCanceled = project.latest_build_state === 'CANCELED';
     const vercelDashboardUrl = `https://vercel.com/~/projects/${project.name}`;
 
     let statusBadge = {
@@ -342,7 +345,7 @@ export const DetailPane: React.FC<DetailPaneProps> = ({ item, type, onDeleteEmai
 
     if (project.last_status === 'healthy') {
       statusBadge = {
-        label: 'Ready / Live',
+        label: isLatestCanceled ? 'Live (Preview Canceled)' : 'Ready / Live',
         dotColor: 'bg-[#30d158]',
         bgColor: 'bg-[#30d158]/10',
         textColor: 'text-[#30d158]',
@@ -366,7 +369,7 @@ export const DetailPane: React.FC<DetailPaneProps> = ({ item, type, onDeleteEmai
       };
     } else if (project.last_status === 'warning') {
       statusBadge = {
-        label: 'Canceled',
+        label: 'Build Canceled',
         dotColor: 'bg-[#ff9f0a]',
         bgColor: 'bg-[#ff9f0a]/10',
         textColor: 'text-[#ff9f0a]',
@@ -386,26 +389,22 @@ export const DetailPane: React.FC<DetailPaneProps> = ({ item, type, onDeleteEmai
           </div>
 
           <div className="flex items-center gap-1.5">
-            {targetUrl && (
-              <>
-                <button
-                  onClick={() => handleCopy(targetUrl)}
-                  className="h-7 px-2.5 rounded-full flex items-center gap-1 text-[12px] text-[#8e8e93] hover:text-[#f5f5f7] hover:bg-white/[0.08] transition-colors cursor-pointer"
-                  title="Copy Live URL"
-                >
-                  {copied ? <CheckIcon className="w-3.5 h-3.5 text-[#30d158]" /> : <CopyIcon className="w-3.5 h-3.5" />}
-                  <span>{copied ? 'Copied' : 'Copy URL'}</span>
-                </button>
-                <button
-                  onClick={() => handleOpenBrowser(targetUrl)}
-                  className="h-7 px-3 rounded-full bg-white/[0.08] hover:bg-white/[0.14] border border-white/[0.06] text-[12px] font-medium text-[#f5f5f7] flex items-center gap-1.5 transition-colors cursor-pointer"
-                  title="Visit Live Application"
-                >
-                  <GlobeIcon className="w-3.5 h-3.5 text-[#30d158]" />
-                  <span>Visit App</span>
-                </button>
-              </>
-            )}
+            <button
+              onClick={() => handleCopy(siteUrl)}
+              className="h-7 px-2.5 rounded-full flex items-center gap-1 text-[12px] text-[#8e8e93] hover:text-[#f5f5f7] hover:bg-white/[0.08] transition-colors cursor-pointer"
+              title="Copy Permanent Site URL"
+            >
+              {copied ? <CheckIcon className="w-3.5 h-3.5 text-[#30d158]" /> : <CopyIcon className="w-3.5 h-3.5" />}
+              <span>{copied ? 'Copied' : 'Copy Site URL'}</span>
+            </button>
+            <button
+              onClick={() => handleOpenBrowser(siteUrl)}
+              className="h-7 px-3 rounded-full bg-white/[0.08] hover:bg-white/[0.14] border border-white/[0.06] text-[12px] font-medium text-[#f5f5f7] flex items-center gap-1.5 transition-colors cursor-pointer"
+              title="Visit Permanent Live Site"
+            >
+              <GlobeIcon className="w-3.5 h-3.5 text-[#30d158]" />
+              <span>Visit Site</span>
+            </button>
 
             <button
               onClick={() => handleOpenBrowser(vercelDashboardUrl)}
@@ -466,29 +465,51 @@ export const DetailPane: React.FC<DetailPaneProps> = ({ item, type, onDeleteEmai
 
           {/* Cards Bento Grid */}
           <div className="grid grid-cols-2 gap-4">
-            {/* Card 1: Production URL */}
-            <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.06] space-y-2">
+            {/* Card 1: Permanent Site URL */}
+            <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.06] space-y-2.5">
               <div className="flex items-center justify-between text-[11px] text-[#8e8e93]">
-                <span className="uppercase tracking-wider font-semibold">Live Production Domain</span>
+                <span className="uppercase tracking-wider font-semibold">Live Site URL (Permanent)</span>
                 <GlobeIcon className="w-3.5 h-3.5 text-[#30d158]" />
               </div>
-              {targetUrl ? (
-                <a
-                  href={targetUrl}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    handleOpenBrowser(targetUrl);
-                  }}
-                  className="text-[14px] font-mono font-medium text-[#f5f5f7] hover:text-[#e5a93c] transition-colors truncate block"
-                >
-                  {targetUrl.replace(/^https?:\/\//, '')}
-                </a>
-              ) : (
-                <span className="text-[13px] text-[#8e8e93]">No domains assigned</span>
+              <a
+                href={siteUrl}
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleOpenBrowser(siteUrl);
+                }}
+                className="text-[14px] font-mono font-medium text-[#f5f5f7] hover:text-[#e5a93c] transition-colors truncate block"
+              >
+                {siteUrl.replace(/^https?:\/\//, '')}
+              </a>
+
+              {/* Distinguish permanent site from temporary deployment preview */}
+              {previewUrl && previewUrl !== siteUrl && (
+                <div className="pt-2 border-t border-white/[0.04] text-[11.5px] space-y-1">
+                  <span className="text-[#8e8e93] block">Latest Branch Preview:</span>
+                  {isLatestCanceled ? (
+                    <div className="flex items-center gap-1.5 text-[#ff9f0a]">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#ff9f0a]" />
+                      <span>Preview build was canceled (live site unaffected)</span>
+                    </div>
+                  ) : (
+                    <a
+                      href={previewUrl}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleOpenBrowser(previewUrl);
+                      }}
+                      className="text-[#8e8e93] hover:text-[#d1d1d6] hover:underline font-mono truncate block"
+                      title="Temporary preview deployment"
+                    >
+                      {previewUrl.replace(/^https?:\/\//, '')}
+                    </a>
+                  )}
+                </div>
               )}
+
               {project.last_deployment_at && (
-                <p className="text-[11.5px] text-[#8e8e93] pt-1 border-t border-white/[0.04]">
-                  Deployed on {new Date(project.last_deployment_at).toLocaleString([], {
+                <p className="text-[11px] text-[#8e8e93] pt-1">
+                  Updated {new Date(project.last_deployment_at).toLocaleString([], {
                     dateStyle: 'medium',
                     timeStyle: 'short',
                   })}

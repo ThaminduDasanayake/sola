@@ -73,6 +73,7 @@ export async function getDb(): Promise<Database | null> {
       'last_commit_branch TEXT',
       'last_commit_author TEXT',
       'last_deployment_at DATETIME',
+      'latest_build_state TEXT',
     ];
 
     for (const col of projectColumns) {
@@ -244,6 +245,7 @@ export async function fetchProjects(): Promise<ProjectTelemetry[]> {
           last_commit_branch: r.last_commit_branch || undefined,
           last_commit_author: r.last_commit_author || undefined,
           last_deployment_at: r.last_deployment_at || undefined,
+          latest_build_state: r.latest_build_state || undefined,
           last_status: r.last_status || 'unknown',
           last_checked_at: r.last_checked_at || new Date().toISOString(),
           open_prs: r.open_prs || 0,
@@ -292,8 +294,8 @@ export async function saveProjects(projects: ProjectTelemetry[]): Promise<void> 
           `INSERT INTO projects (
             name, repo_slug, vercel_project_id, framework, live_url, deployment_url,
             last_commit_message, last_commit_branch, last_commit_author,
-            last_deployment_at, last_status, last_checked_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            last_deployment_at, latest_build_state, last_status, last_checked_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             p.name,
             p.repo_slug || null,
@@ -305,6 +307,7 @@ export async function saveProjects(projects: ProjectTelemetry[]): Promise<void> 
             p.last_commit_branch || null,
             p.last_commit_author || null,
             p.last_deployment_at || null,
+            p.latest_build_state || null,
             p.last_status,
             p.last_checked_at,
           ]

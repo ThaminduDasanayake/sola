@@ -80,12 +80,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
       if (savedVoice && available.some((v) => v.name === savedVoice)) {
         currentVoice = savedVoice;
       } else {
-        const defaultV =
-          available.find((v) => v.name.toLowerCase().includes('siri')) ||
-          available.find((v) => v.name.includes('Ava')) ||
-          available.find((v) => v.name.includes('Samantha')) ||
-          available.find((v) => v.name.includes('Daniel')) ||
-          available[0];
+        const defaultV = ttsService.getBestVoice();
         if (defaultV) currentVoice = defaultV.name;
       }
 

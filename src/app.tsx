@@ -11,6 +11,7 @@ import { SettingsPage } from './components/settings-page';
 import { fetchBookmarks, fetchEmails, fetchProjects, addBookmark, deleteEmails } from './services/db';
 import { DeleteConfirmDialog } from './components/delete-confirm-dialog';
 import { syncManager } from './services/sync-manager';
+import { vercelService } from './services/vercel';
 import type { Bookmark, EmailThread, ProjectTelemetry, ActiveTab, EmailCategoryTab } from './types';
 
 export function App() {
@@ -72,6 +73,33 @@ export function App() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
   const [lastSyncText, setLastSyncText] = useState<string>(syncManager.formatRelativeLastSync());
+
+  // Vercel Telemetry Sync State
+  const [isSyncingVercel, setIsSyncingVercel] = useState(false);
+  const [vercelSyncError, setVercelSyncError] = useState<string | null>(null);
+
+  const handleSyncVercel = async () => {
+    setIsSyncingVercel(true);
+    setVercelSyncError(null);
+    try {
+      const res = await vercelService.syncProjects();
+      if (res.success) {
+        setProjects(res.projects);
+        setSelectedProject((prev) => {
+          if (prev && res.projects.some((p) => p.id === prev.id)) {
+            return res.projects.find((p) => p.id === prev.id) || prev;
+          }
+          return res.projects[0] || null;
+        });
+      } else if (res.error) {
+        setVercelSyncError(res.error);
+      }
+    } catch (err: any) {
+      setVercelSyncError(err.message || 'Failed to sync Vercel projects');
+    } finally {
+      setIsSyncingVercel(false);
+    }
+  };
 
   const handleSync = async () => {
     setSyncError(null);
@@ -156,6 +184,16 @@ export function App() {
         syncManager.triggerSync().catch((err) => {
           console.warn('Auto background upgrade sync error:', err);
         });
+      }
+
+      // If local projects are empty and we're online, attempt background Vercel sync
+      if (pList.length === 0 && typeof navigator !== 'undefined' && navigator.onLine) {
+        vercelService.syncProjects().then((res) => {
+          if (res.success && res.projects.length > 0) {
+            setProjects(res.projects);
+            setSelectedProject((prev) => prev || res.projects[0]);
+          }
+        }).catch(() => {});
       }
     }
 
@@ -348,6 +386,8 @@ export function App() {
             onBack={() => setActiveTab('inbox')}
             onSyncInbox={handleSync}
             isSyncing={isSyncing}
+            onSyncVercel={handleSyncVercel}
+            isSyncingVercel={isSyncingVercel}
           />
         ) : (
           <>
@@ -389,6 +429,10 @@ export function App() {
                   projects={projects}
                   selectedId={selectedProject?.id ?? null}
                   onSelect={setSelectedProject}
+                  onSyncVercel={handleSyncVercel}
+                  isSyncing={isSyncingVercel}
+                  onOpenSettings={() => setActiveTab('settings')}
+                  syncError={vercelSyncError}
                 />
               )}
             </div>

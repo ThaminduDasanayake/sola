@@ -4,11 +4,6 @@ import type { Bookmark, EmailThread, ProjectTelemetry } from '../types';
 
 let dbInstance: Database | null = null;
 
-// In-memory data collections (starts completely empty, populated via sync/user input)
-const INITIAL_BOOKMARKS: Bookmark[] = [];
-const INITIAL_EMAILS: EmailThread[] = [];
-const INITIAL_PROJECTS: ProjectTelemetry[] = [];
-
 export async function getDb(): Promise<Database | null> {
   if (dbInstance) return dbInstance;
   try {
@@ -49,6 +44,43 @@ export async function getDb(): Promise<Database | null> {
       await dbInstance.execute('ALTER TABLE emails ADD COLUMN body_html TEXT;');
     } catch {
       // Column already exists
+    }
+
+    // Ensure projects table exists and has all telemetry columns
+    await dbInstance.execute(`
+      CREATE TABLE IF NOT EXISTS projects (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        repo_slug TEXT,
+        vercel_project_id TEXT,
+        framework TEXT,
+        live_url TEXT,
+        deployment_url TEXT,
+        last_commit_message TEXT,
+        last_commit_branch TEXT,
+        last_commit_author TEXT,
+        last_deployment_at DATETIME,
+        last_status TEXT DEFAULT 'unknown',
+        last_checked_at DATETIME
+      );
+    `);
+
+    const projectColumns = [
+      'framework TEXT',
+      'live_url TEXT',
+      'deployment_url TEXT',
+      'last_commit_message TEXT',
+      'last_commit_branch TEXT',
+      'last_commit_author TEXT',
+      'last_deployment_at DATETIME',
+    ];
+
+    for (const col of projectColumns) {
+      try {
+        await dbInstance.execute(`ALTER TABLE projects ADD COLUMN ${col};`);
+      } catch {
+        // Column already exists
+      }
     }
 
     return dbInstance;
@@ -120,7 +152,9 @@ export async function addBookmark(item: Omit<Bookmark, 'id' | 'created_at'>): Pr
         `INSERT INTO bookmarks (url, title, description, tags, ai_notes) VALUES (?, ?, ?, ?, ?)`,
         [item.url, item.title, item.description || '', JSON.stringify(item.tags || []), item.ai_notes || '']
       );
-      newBookmark.id = res.lastInsertId;
+      if (res.lastInsertId !== undefined) {
+        newBookmark.id = res.lastInsertId;
+      }
 
       // Index into FTS5
       await db.execute(
@@ -197,12 +231,89 @@ export async function fetchProjects(): Promise<ProjectTelemetry[]> {
   if (db) {
     try {
       const rows = await db.select<any[]>('SELECT * FROM projects ORDER BY last_checked_at DESC');
-      if (rows.length > 0) return rows;
+      if (rows && rows.length > 0) {
+        memoryProjects = rows.map((r) => ({
+          id: r.id,
+          name: r.name,
+          repo_slug: r.repo_slug || undefined,
+          vercel_project_id: r.vercel_project_id || undefined,
+          framework: r.framework || undefined,
+          live_url: r.live_url || undefined,
+          deployment_url: r.deployment_url || undefined,
+          last_commit_message: r.last_commit_message || undefined,
+          last_commit_branch: r.last_commit_branch || undefined,
+          last_commit_author: r.last_commit_author || undefined,
+          last_deployment_at: r.last_deployment_at || undefined,
+          last_status: r.last_status || 'unknown',
+          last_checked_at: r.last_checked_at || new Date().toISOString(),
+          open_prs: r.open_prs || 0,
+          db_storage_used_pct: r.db_storage_used_pct || undefined,
+        }));
+        return memoryProjects;
+      }
     } catch (e) {
       console.warn('SQLite projects read failed:', e);
     }
   }
+
+  // Fallback to localStorage cache
+  if (typeof window !== 'undefined') {
+    try {
+      const cached = localStorage.getItem('sola_cached_projects');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed.length > 0) {
+          memoryProjects = parsed;
+          return parsed;
+        }
+      }
+    } catch {}
+  }
+
   return memoryProjects;
+}
+
+export async function saveProjects(projects: ProjectTelemetry[]): Promise<void> {
+  memoryProjects = projects;
+
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem('sola_cached_projects', JSON.stringify(projects));
+    } catch {}
+  }
+
+  const db = await getDb();
+  if (db) {
+    try {
+      // Clear previous cached telemetry rows and insert fresh
+      await db.execute('DELETE FROM projects');
+      for (const p of projects) {
+        await db.execute(
+          `INSERT INTO projects (
+            name, repo_slug, vercel_project_id, framework, live_url, deployment_url,
+            last_commit_message, last_commit_branch, last_commit_author,
+            last_deployment_at, last_status, last_checked_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            p.name,
+            p.repo_slug || null,
+            p.vercel_project_id || null,
+            p.framework || null,
+            p.live_url || null,
+            p.deployment_url || null,
+            p.last_commit_message || null,
+            p.last_commit_branch || null,
+            p.last_commit_author || null,
+            p.last_deployment_at || null,
+            p.last_status,
+            p.last_checked_at,
+          ]
+        );
+      }
+    } catch (e) {
+      console.warn('Failed to save projects to SQLite:', e);
+    }
+  }
 }
 
 export async function fetchDeletedEmailIds(): Promise<string[]> {

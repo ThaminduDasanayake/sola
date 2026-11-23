@@ -11,15 +11,21 @@ import {
   ArrowLeft as ArrowLeftIcon,
   Clock as ClockIcon,
   Folder as FolderIcon,
+  CheckCircle as CheckCircleIcon,
+  XCircle as XCircleIcon,
+  Key as KeyIcon,
 } from '@phosphor-icons/react';
 import { ttsService } from '../services/tts';
 import { syncManager } from '../services/sync-manager';
+import { vercelService } from '../services/vercel';
 import { revealDatabaseInFinder } from '../services/db';
 
 interface SettingsPageProps {
   onBack?: () => void;
   onSyncInbox?: () => void;
   isSyncing?: boolean;
+  onSyncVercel?: () => Promise<void>;
+  isSyncingVercel?: boolean;
 }
 
 const NOVELTY_VOICE_NAMES = new Set([
@@ -46,12 +52,14 @@ const NOVELTY_VOICE_NAMES = new Set([
   'kathy',
 ]);
 
-type SettingsSection = 'voice' | 'email' | 'general';
+type SettingsSection = 'voice' | 'email' | 'vercel' | 'general';
 
 export const SettingsPage: React.FC<SettingsPageProps> = ({
   onBack,
   onSyncInbox,
   isSyncing = false,
+  onSyncVercel,
+  isSyncingVercel = false,
 }) => {
   const [activeSection, setActiveSection] = useState<SettingsSection>('voice');
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
@@ -69,6 +77,15 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
     rate: 1.05,
     limit: 40,
   });
+
+  // Vercel Settings State
+  const [vercelToken, setVercelToken] = useState<string>('');
+  const [vercelTeamId, setVercelTeamId] = useState<string>('');
+  const [isVercelFromEnv, setIsVercelFromEnv] = useState<boolean>(false);
+  const [vercelStatus, setVercelStatus] = useState<'idle' | 'testing' | 'valid' | 'invalid'>('idle');
+  const [vercelUser, setVercelUser] = useState<string | null>(null);
+  const [vercelError, setVercelError] = useState<string | null>(null);
+  const [vercelSaveSuccess, setVercelSaveSuccess] = useState<boolean>(false);
 
   useEffect(() => {
     const load = () => {
@@ -97,6 +114,26 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
         voice: currentVoice,
         rate: currentRate,
         limit: currentLimit,
+      });
+
+      // Load Vercel credentials
+      vercelService.getCredentials().then((creds) => {
+        if (creds.token) {
+          setVercelToken(creds.token);
+          setIsVercelFromEnv(creds.isFromEnv);
+          if (creds.teamId) setVercelTeamId(creds.teamId);
+
+          // Test token in background
+          vercelService.verifyToken(creds.token, creds.teamId).then((result) => {
+            if (result.valid) {
+              setVercelStatus('valid');
+              setVercelUser(result.name || null);
+            } else {
+              setVercelStatus('invalid');
+              setVercelError(result.error || 'Invalid token');
+            }
+          });
+        }
       });
     };
 
@@ -151,12 +188,12 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
 
   const handleTestVoice = () => {
     setIsPlayingTest(true);
+    if (draftVoice) {
+      ttsService.setSelectedVoiceName(draftVoice);
+    }
+    ttsService.setRate(draftRate);
     ttsService.speak(
-      'Good morning. You have three unread messages in your inbox today.',
-      {
-        voiceName: draftVoice,
-        rate: draftRate,
-      }
+      'Good morning. You have three unread messages in your inbox today.'
     );
     setTimeout(() => setIsPlayingTest(false), 4000);
   };
@@ -186,6 +223,47 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
     setDraftRate(initialSettings.rate);
     setDraftLimit(initialSettings.limit);
     if (onBack) onBack();
+  };
+
+  const handleTestVercel = async () => {
+    if (!vercelToken.trim()) {
+      setVercelStatus('invalid');
+      setVercelError('Please enter a Vercel token');
+      return;
+    }
+    setVercelStatus('testing');
+    setVercelError(null);
+    const res = await vercelService.verifyToken(vercelToken, vercelTeamId);
+    if (res.valid) {
+      setVercelStatus('valid');
+      setVercelUser(res.name || 'Connected');
+      if (onSyncVercel) {
+        await onSyncVercel();
+      } else {
+        await vercelService.syncProjects();
+      }
+    } else {
+      setVercelStatus('invalid');
+      setVercelError(res.error || 'Verification failed');
+    }
+  };
+
+  const handleSaveVercel = () => {
+    if (typeof window !== 'undefined') {
+      if (vercelToken.trim()) {
+        localStorage.setItem('sola_vercel_token', vercelToken.trim());
+      } else {
+        localStorage.removeItem('sola_vercel_token');
+      }
+      if (vercelTeamId.trim()) {
+        localStorage.setItem('sola_vercel_team_id', vercelTeamId.trim());
+      } else {
+        localStorage.removeItem('sola_vercel_team_id');
+      }
+      setVercelSaveSuccess(true);
+      setTimeout(() => setVercelSaveSuccess(false), 2000);
+      handleTestVercel();
+    }
   };
 
   return (
@@ -234,6 +312,20 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
               weight={activeSection === 'email' ? 'fill' : 'regular'}
             />
             <span>Inboxes & Sync</span>
+          </button>
+
+          <button
+            onClick={() => setActiveSection('vercel')}
+            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-full text-[13px] transition-colors ${
+              activeSection === 'vercel'
+                ? 'bg-white/[0.12] text-[#f5f5f7] font-medium shadow-sm'
+                : 'text-[#8e8e93] hover:text-[#d1d1d6] hover:bg-white/[0.05]'
+            }`}
+          >
+            <span className={`w-4 h-4 flex items-center justify-center font-bold text-[12px] ${activeSection === 'vercel' ? 'text-[#e5a93c]' : 'text-[#8e8e93]'}`}>
+              ▲
+            </span>
+            <span>Deployments (Vercel)</span>
           </button>
 
           <button
@@ -470,6 +562,143 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                     </button>
                   </div>
                 )}
+              </div>
+            </div>
+          )}
+
+          {/* Section: Deployments (Vercel) */}
+          {activeSection === 'vercel' && (
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-[20px] font-semibold text-[#f5f5f7] tracking-tight">
+                  Vercel Deployments & Pulse
+                </h2>
+                <p className="text-[13px] text-[#8e8e93] mt-1">
+                  Connect your Vercel account to monitor deployments and preview status in Pulse.
+                </p>
+              </div>
+
+              <div className="bg-[#1c1c1e] rounded-2xl border border-white/[0.06] p-5 space-y-4">
+                {/* Status Callout */}
+                <div className="flex items-center justify-between p-3.5 rounded-xl bg-white/[0.03] border border-white/[0.04]">
+                  <div className="flex items-center gap-2.5">
+                    <span className="w-5 h-5 rounded-lg bg-black flex items-center justify-center font-bold text-[11px] text-[#f5f5f7] border border-white/10">
+                      ▲
+                    </span>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[13px] font-medium text-[#f5f5f7]">Vercel REST API</span>
+                        {isVercelFromEnv && (
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#e5a93c]/15 text-[#e5a93c] border border-[#e5a93c]/30">
+                            Loaded from .env
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11.5px] text-[#8e8e93] mt-0.5">
+                        {vercelStatus === 'valid'
+                          ? `Authenticated as ${vercelUser || 'Vercel User'}`
+                          : vercelStatus === 'testing'
+                          ? 'Checking credentials...'
+                          : vercelStatus === 'invalid'
+                          ? (vercelError || 'Authentication failed')
+                          : 'Enter your Personal Access Token below'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {vercelStatus === 'valid' && (
+                      <span className="inline-flex items-center gap-1.5 text-[11.5px] font-medium text-[#30d158] bg-[#30d158]/10 px-2.5 py-1 rounded-full border border-[#30d158]/20">
+                        <CheckCircleIcon className="w-3.5 h-3.5" weight="fill" />
+                        <span>Connected</span>
+                      </span>
+                    )}
+                    {vercelStatus === 'invalid' && (
+                      <span className="inline-flex items-center gap-1.5 text-[11.5px] font-medium text-[#ff453a] bg-[#ff453a]/10 px-2.5 py-1 rounded-full border border-[#ff453a]/20">
+                        <XCircleIcon className="w-3.5 h-3.5" weight="fill" />
+                        <span>Not Connected</span>
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Token Input */}
+                <div className="space-y-1.5 pt-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[12.5px] font-medium text-[#d1d1d6] flex items-center gap-1.5">
+                      <KeyIcon className="w-3.5 h-3.5 text-[#e5a93c]" />
+                      <span>Personal Access Token</span>
+                    </label>
+                    <a
+                      href="https://vercel.com/account/settings/tokens"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-[11.5px] text-[#e5a93c] hover:underline"
+                    >
+                      Get token from Vercel →
+                    </a>
+                  </div>
+                  <input
+                    type="password"
+                    value={vercelToken}
+                    onChange={(e) => {
+                      setVercelToken(e.target.value);
+                      setVercelStatus('idle');
+                    }}
+                    placeholder="vercel_xxxxxxxxxxxxxxxxxxxx"
+                    className="w-full bg-[#28282b] text-[12.5px] text-[#f5f5f7] px-3.5 py-2.5 rounded-xl border border-white/[0.08] focus:outline-none focus:ring-1 focus:ring-white/20 font-mono"
+                  />
+                  <p className="text-[11px] text-[#8e8e93]">
+                    Token is kept locally on your Mac. You can also specify it in <code className="text-[#e5a93c]">.env</code> as <code className="text-[#e5a93c]">VERCEL_API_TOKEN</code>.
+                  </p>
+                </div>
+
+                {/* Optional Team ID */}
+                <div className="space-y-1.5 pt-2">
+                  <label className="text-[12.5px] font-medium text-[#d1d1d6] block">
+                    Vercel Team ID (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={vercelTeamId}
+                    onChange={(e) => {
+                      setVercelTeamId(e.target.value);
+                      setVercelStatus('idle');
+                    }}
+                    placeholder="team_xxxxxxxxxxxxxxxxxxxx (leave empty for personal account)"
+                    className="w-full bg-[#28282b] text-[12.5px] text-[#f5f5f7] px-3.5 py-2.5 rounded-xl border border-white/[0.08] focus:outline-none focus:ring-1 focus:ring-white/20 font-mono"
+                  />
+                </div>
+
+                {/* Actions */}
+                <div className="pt-4 border-t border-white/[0.06] flex items-center justify-between">
+                  <span className="text-[12px] text-[#8e8e93]">
+                    {vercelSaveSuccess && (
+                      <span className="text-[#30d158] flex items-center gap-1 font-medium">
+                        <CheckIcon className="w-3.5 h-3.5" />
+                        <span>Settings saved</span>
+                      </span>
+                    )}
+                  </span>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handleSaveVercel}
+                      className="h-8 px-4 rounded-full bg-white/[0.08] hover:bg-white/[0.14] border border-white/[0.08] text-[12px] font-medium text-[#f5f5f7] transition-colors cursor-pointer"
+                    >
+                      Save Token
+                    </button>
+
+                    <button
+                      onClick={handleTestVercel}
+                      disabled={vercelStatus === 'testing' || isSyncingVercel}
+                      className="h-8 px-4 rounded-full bg-[#e5a93c] text-[#141416] hover:brightness-110 text-[12px] font-semibold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer disabled:opacity-50"
+                    >
+                      <ArrowsClockwiseIcon className={`w-3.5 h-3.5 ${vercelStatus === 'testing' || isSyncingVercel ? 'animate-spin' : ''}`} />
+                      <span>{vercelStatus === 'testing' || isSyncingVercel ? 'Connecting...' : 'Test & Sync Now'}</span>
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           )}

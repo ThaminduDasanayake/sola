@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import {
   ArrowSquareOut as ArrowSquareOutIcon,
   SpeakerHigh as SpeakerHighIcon,
-  SpeakerSimpleSlash as SpeakerSimpleSlashIcon,
   Copy as CopyIcon,
   Check as CheckIcon,
   User as UserIcon,
@@ -12,6 +11,9 @@ import {
   SkipForward as SkipForwardIcon,
   SkipBack as SkipBackIcon,
   Stop as StopIcon,
+  GitBranch as GitBranchIcon,
+  Globe as GlobeIcon,
+  Code as CodeIcon,
 } from '@phosphor-icons/react';
 import { ttsService, TTSState } from '../services/tts';
 import { HtmlEmailViewer } from './html-email-viewer';
@@ -327,36 +329,214 @@ export const DetailPane: React.FC<DetailPaneProps> = ({ item, type, onDeleteEmai
 
   if (type === 'project') {
     const project = item as ProjectTelemetry;
+    const targetUrl = project.live_url || project.deployment_url;
+    const vercelDashboardUrl = `https://vercel.com/~/projects/${project.name}`;
+
+    let statusBadge = {
+      label: 'Unknown',
+      dotColor: 'bg-[#8e8e93]',
+      bgColor: 'bg-white/[0.06]',
+      textColor: 'text-[#8e8e93]',
+      isPulsing: false,
+    };
+
+    if (project.last_status === 'healthy') {
+      statusBadge = {
+        label: 'Ready / Live',
+        dotColor: 'bg-[#30d158]',
+        bgColor: 'bg-[#30d158]/10',
+        textColor: 'text-[#30d158]',
+        isPulsing: false,
+      };
+    } else if (project.last_status === 'building') {
+      statusBadge = {
+        label: 'Building...',
+        dotColor: 'bg-[#e5a93c]',
+        bgColor: 'bg-[#e5a93c]/10',
+        textColor: 'text-[#e5a93c]',
+        isPulsing: true,
+      };
+    } else if (project.last_status === 'failed') {
+      statusBadge = {
+        label: 'Deployment Error',
+        dotColor: 'bg-[#ff453a]',
+        bgColor: 'bg-[#ff453a]/10',
+        textColor: 'text-[#ff453a]',
+        isPulsing: false,
+      };
+    } else if (project.last_status === 'warning') {
+      statusBadge = {
+        label: 'Canceled',
+        dotColor: 'bg-[#ff9f0a]',
+        bgColor: 'bg-[#ff9f0a]/10',
+        textColor: 'text-[#ff9f0a]',
+        isPulsing: false,
+      };
+    }
+
     return (
       <div className="flex-1 overflow-y-auto flex flex-col bg-[#141416]">
-        <div className="h-10 border-b border-white/[0.06] flex items-center justify-between px-6 shrink-0">
-          <span className="text-[12px] text-[#8e8e93]">Telemetry</span>
-          <span className="text-[12px] text-[#30d158] capitalize">
-            {project.last_status}
-          </span>
-        </div>
-
-        <div className="max-w-2xl w-full mx-auto px-8 py-6 space-y-6 select-text">
-          <div>
-            <h1 className="text-[20px] font-semibold text-[#f5f5f7] tracking-tight select-text">
-              {project.name}
-            </h1>
-            {project.repo_slug && (
-              <p className="text-[13px] text-[#e5a93c] mt-1 select-text">{project.repo_slug}</p>
-            )}
+        {/* Detail Action Bar */}
+        <div className="h-10 border-b border-white/[0.06] flex items-center justify-between px-6 shrink-0 sticky top-0 bg-[#141416]/95 backdrop-blur z-20">
+          <div className="flex items-center gap-2">
+            <span className="text-[12px] text-[#8e8e93]">Vercel Project</span>
+            <span className="text-[11px] text-[#e5a93c] font-mono">
+              {project.vercel_project_id || 'prj_live'}
+            </span>
           </div>
 
+          <div className="flex items-center gap-1.5">
+            {targetUrl && (
+              <>
+                <button
+                  onClick={() => handleCopy(targetUrl)}
+                  className="h-7 px-2.5 rounded-full flex items-center gap-1 text-[12px] text-[#8e8e93] hover:text-[#f5f5f7] hover:bg-white/[0.08] transition-colors cursor-pointer"
+                  title="Copy Live URL"
+                >
+                  {copied ? <CheckIcon className="w-3.5 h-3.5 text-[#30d158]" /> : <CopyIcon className="w-3.5 h-3.5" />}
+                  <span>{copied ? 'Copied' : 'Copy URL'}</span>
+                </button>
+                <button
+                  onClick={() => handleOpenBrowser(targetUrl)}
+                  className="h-7 px-3 rounded-full bg-white/[0.08] hover:bg-white/[0.14] border border-white/[0.06] text-[12px] font-medium text-[#f5f5f7] flex items-center gap-1.5 transition-colors cursor-pointer"
+                  title="Visit Live Application"
+                >
+                  <GlobeIcon className="w-3.5 h-3.5 text-[#30d158]" />
+                  <span>Visit App</span>
+                </button>
+              </>
+            )}
+
+            <button
+              onClick={() => handleOpenBrowser(vercelDashboardUrl)}
+              className="h-7 px-3 rounded-full bg-[#e5a93c]/15 hover:bg-[#e5a93c]/25 border border-[#e5a93c]/30 text-[12px] font-medium text-[#e5a93c] flex items-center gap-1.5 transition-colors cursor-pointer"
+              title="Open Project on Vercel Dashboard"
+            >
+              <ArrowSquareOutIcon className="w-3.5 h-3.5" />
+              <span>Vercel Dashboard</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Content View */}
+        <div className="max-w-3xl w-full mx-auto px-8 py-6 space-y-6 select-text flex-1">
+          {/* Project Header */}
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2.5">
+                <h1 className="text-[22px] font-semibold text-[#f5f5f7] leading-tight tracking-tight select-text">
+                  {project.name}
+                </h1>
+                {project.framework && (
+                  <span className="px-2 py-0.5 rounded-md bg-white/[0.08] text-[11px] font-mono text-[#d1d1d6] capitalize border border-white/[0.06]">
+                    {project.framework}
+                  </span>
+                )}
+              </div>
+
+              {project.repo_slug && (
+                <div className="flex items-center gap-1.5 mt-2 text-[12.5px] text-[#8e8e93]">
+                  <CodeIcon className="w-3.5 h-3.5 text-[#e5a93c]" />
+                  <a
+                    href={`https://github.com/${project.repo_slug}`}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleOpenBrowser(`https://github.com/${project.repo_slug}`);
+                    }}
+                    className="hover:text-[#f5f5f7] hover:underline"
+                  >
+                    {project.repo_slug}
+                  </a>
+                </div>
+              )}
+            </div>
+
+            {/* Status Pill */}
+            <div
+              className={`px-3 py-1 rounded-full border border-white/[0.08] flex items-center gap-2 ${statusBadge.bgColor} ${statusBadge.textColor} text-[12px] font-medium shrink-0 shadow-sm`}
+            >
+              <span
+                className={`w-2 h-2 rounded-full ${statusBadge.dotColor} ${
+                  statusBadge.isPulsing ? 'animate-pulse' : ''
+                }`}
+              />
+              <span>{statusBadge.label}</span>
+            </div>
+          </div>
+
+          {/* Cards Bento Grid */}
           <div className="grid grid-cols-2 gap-4">
-            <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.04]">
-              <div className="text-[11px] text-[#8e8e93]">Pull Requests</div>
-              <div className="text-[20px] font-semibold text-[#f5f5f7] mt-1">
-                {project.open_prs ?? 0}
+            {/* Card 1: Production URL */}
+            <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.06] space-y-2">
+              <div className="flex items-center justify-between text-[11px] text-[#8e8e93]">
+                <span className="uppercase tracking-wider font-semibold">Live Production Domain</span>
+                <GlobeIcon className="w-3.5 h-3.5 text-[#30d158]" />
+              </div>
+              {targetUrl ? (
+                <a
+                  href={targetUrl}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleOpenBrowser(targetUrl);
+                  }}
+                  className="text-[14px] font-mono font-medium text-[#f5f5f7] hover:text-[#e5a93c] transition-colors truncate block"
+                >
+                  {targetUrl.replace(/^https?:\/\//, '')}
+                </a>
+              ) : (
+                <span className="text-[13px] text-[#8e8e93]">No domains assigned</span>
+              )}
+              {project.last_deployment_at && (
+                <p className="text-[11.5px] text-[#8e8e93] pt-1 border-t border-white/[0.04]">
+                  Deployed on {new Date(project.last_deployment_at).toLocaleString([], {
+                    dateStyle: 'medium',
+                    timeStyle: 'short',
+                  })}
+                </p>
+              )}
+            </div>
+
+            {/* Card 2: Git Commit & Branch */}
+            <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.06] space-y-2">
+              <div className="flex items-center justify-between text-[11px] text-[#8e8e93]">
+                <span className="uppercase tracking-wider font-semibold">Latest Commit</span>
+                <GitBranchIcon className="w-3.5 h-3.5 text-[#e5a93c]" />
+              </div>
+              <p className="text-[13px] text-[#f5f5f7] line-clamp-2 leading-relaxed">
+                {project.last_commit_message || 'No commit message attached to latest build.'}
+              </p>
+              <div className="flex items-center justify-between text-[11px] text-[#8e8e93] pt-1 border-t border-white/[0.04]">
+                <span>Branch: <strong className="text-[#d1d1d6] font-mono">{project.last_commit_branch || 'main'}</strong></span>
+                {project.last_commit_author && (
+                  <span>by <strong className="text-[#d1d1d6]">{project.last_commit_author}</strong></span>
+                )}
               </div>
             </div>
-            <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.04]">
-              <div className="text-[11px] text-[#8e8e93]">Storage Used</div>
-              <div className="text-[20px] font-semibold text-[#f5f5f7] mt-1">
-                {project.db_storage_used_pct ?? 0}%
+          </div>
+
+          {/* Telemetry & Health Info */}
+          <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/[0.04] space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-[12.5px] font-medium text-[#f5f5f7]">Infrastructure & Telemetry</span>
+              <span className="text-[11px] font-mono text-[#8e8e93]">
+                Checked {new Date(project.last_checked_at).toLocaleTimeString([], { timeStyle: 'short' })}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3 text-[12px]">
+              <div className="p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.03]">
+                <span className="text-[11px] text-[#8e8e93] block">Edge Network</span>
+                <span className="text-[#f5f5f7] font-medium mt-0.5 block">Vercel Global Anycast</span>
+              </div>
+              <div className="p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.03]">
+                <span className="text-[11px] text-[#8e8e93] block">SSL / TLS</span>
+                <span className="text-[#30d158] font-medium mt-0.5 block">Automated & Active</span>
+              </div>
+              <div className="p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.03]">
+                <span className="text-[11px] text-[#8e8e93] block">Project ID</span>
+                <span className="text-[#d1d1d6] font-mono text-[11px] mt-0.5 block truncate">
+                  {project.vercel_project_id || 'N/A'}
+                </span>
               </div>
             </div>
           </div>

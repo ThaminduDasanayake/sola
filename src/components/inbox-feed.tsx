@@ -1,6 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import {
-  UserCircle as UserCircleIcon,
   Trash as TrashIcon,
   Check as CheckIcon,
   CheckSquare as CheckSquareIcon,
@@ -64,7 +63,7 @@ export const InboxFeed: React.FC<InboxFeedProps> = ({
   onSelect,
   selectedAccount = 'all',
   accounts = [],
-  onSelectAccount,
+  onSelectAccount: _onSelectAccount,
   lastSyncText,
   isSyncing = false,
   categoryTab = 'Primary',

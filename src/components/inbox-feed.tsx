@@ -25,7 +25,7 @@ interface InboxFeedProps {
 
 function formatFeedDate(dateStr: string): string {
   const date = new Date(dateStr);
-  if (isNaN(date.getTime())) return '';
+  if (Number.isNaN(date.getTime())) return '';
 
   const now = new Date();
 

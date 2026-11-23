@@ -21,7 +21,7 @@ interface PulseFeedProps {
 function formatRelativeTime(dateStr?: string): string {
   if (!dateStr) return '';
   const date = new Date(dateStr);
-  if (isNaN(date.getTime())) return '';
+  if (Number.isNaN(date.getTime())) return '';
 
   const diffMs = Date.now() - date.getTime();
   const diffSec = Math.floor(diffMs / 1000);

@@ -443,7 +443,7 @@ export async function syncGmail(limit?: number): Promise<EmailThread[]> {
       }
       // Normalize dates to ISO-8601 for accurate SQLite sorting
       fetched.forEach((item) => {
-        if (!isNaN(Date.parse(item.received_at))) {
+        if (!Number.isNaN(Date.parse(item.received_at))) {
           item.received_at = new Date(item.received_at).toISOString();
         }
       });

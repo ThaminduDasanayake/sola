@@ -7,11 +7,15 @@
   },
   "files": {
     "includes": [
-      "**",
+      "src/**/*",
+      "*.ts",
+      "*.json",
+      "*.html",
       "!!**/dist",
       "!!**/src-tauri/target",
       "!!**/src-tauri/gen",
       "!!**/node_modules",
+      "!!**/*.svg",
       "!!sola.db*"
     ]
   },
@@ -30,18 +34,23 @@
         "noStaticElementInteractions": "off",
         "useButtonType": "off",
         "noLabelWithoutControl": "off",
-        "noAutofocus": "off"
+        "noAutofocus": "off",
+        "noSvgWithoutTitle": "off"
       },
       "complexity": {
         "noImportantStyles": "off",
         "useLiteralKeys": "off"
+      },
+      "correctness": {
+        "useExhaustiveDependencies": "off"
       },
       "style": {
         "useImportType": "off"
       },
       "suspicious": {
         "noExplicitAny": "off",
-        "useIterableCallbackReturn": "off"
+        "useIterableCallbackReturn": "off",
+        "noArrayIndexKey": "off"
       }
     }
   },

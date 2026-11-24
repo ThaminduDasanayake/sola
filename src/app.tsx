@@ -1,18 +1,24 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import './app.css';
-import { TopBar } from './components/top-bar';
-import { Sidebar } from './components/sidebar';
-import { VaultFeed } from './components/vault-feed';
-import { InboxFeed } from './components/inbox-feed';
-import { PulseFeed } from './components/pulse-feed';
+import { DeleteConfirmDialog } from './components/delete-confirm-dialog';
 import { DetailPane } from './components/detail-pane';
+import { InboxFeed } from './components/inbox-feed';
 import { QuickAddModal } from './components/quick-add-modal';
 import { SettingsPage } from './components/settings-page';
-import { fetchBookmarks, fetchEmails, fetchProjects, addBookmark, deleteEmails } from './services/db';
-import { DeleteConfirmDialog } from './components/delete-confirm-dialog';
+import { Sidebar } from './components/sidebar';
+import { TopBar } from './components/top-bar';
+import { VaultFeed } from './components/vault-feed';
+import { VercelFeed } from './components/vercel-feed';
+import {
+  addBookmark,
+  deleteEmails,
+  fetchBookmarks,
+  fetchEmails,
+  fetchProjects,
+} from './services/db';
 import { syncManager } from './services/sync-manager';
 import { vercelService } from './services/vercel';
-import type { Bookmark, EmailThread, ProjectTelemetry, ActiveTab, EmailCategoryTab } from './types';
+import type { ActiveTab, Bookmark, EmailCategoryTab, EmailThread, ProjectTelemetry } from './types';
 
 export function App() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('inbox');
@@ -111,7 +117,8 @@ export function App() {
           if (prev && updated.some((e) => e.id === prev.id)) {
             return updated.find((e) => e.id === prev.id) || prev;
           }
-          const savedId = typeof window !== 'undefined' ? localStorage.getItem('sola_selected_email_id') : null;
+          const savedId =
+            typeof window !== 'undefined' ? localStorage.getItem('sola_selected_email_id') : null;
           const target = (savedId && updated.find((e) => e.id === savedId)) || updated[0];
           if (typeof window !== 'undefined' && target) {
             localStorage.setItem('sola_selected_email_id', target.id);
@@ -131,8 +138,10 @@ export function App() {
         if (prev && updatedEmails.some((e) => e.id === prev.id)) {
           return updatedEmails.find((e) => e.id === prev.id) || prev;
         }
-        const savedId = typeof window !== 'undefined' ? localStorage.getItem('sola_selected_email_id') : null;
-        const target = (savedId && updatedEmails.find((e) => e.id === savedId)) || updatedEmails[0] || null;
+        const savedId =
+          typeof window !== 'undefined' ? localStorage.getItem('sola_selected_email_id') : null;
+        const target =
+          (savedId && updatedEmails.find((e) => e.id === savedId)) || updatedEmails[0] || null;
         if (typeof window !== 'undefined' && target) {
           localStorage.setItem('sola_selected_email_id', target.id);
         }
@@ -169,7 +178,8 @@ export function App() {
 
       if (bList.length > 0 && !selectedBookmark) setSelectedBookmark(bList[0]);
       if (eList.length > 0) {
-        const savedId = typeof window !== 'undefined' ? localStorage.getItem('sola_selected_email_id') : null;
+        const savedId =
+          typeof window !== 'undefined' ? localStorage.getItem('sola_selected_email_id') : null;
         const target = (savedId && eList.find((e) => e.id === savedId)) || eList[0];
         setSelectedEmail(target);
       }
@@ -180,20 +190,42 @@ export function App() {
       const hasLegacyFormat = eList.some(
         (e) => !e.body_html || e.snippet.includes('Content-Type:')
       );
-      if (eList.length === 0 || (hasLegacyFormat && typeof navigator !== 'undefined' && navigator.onLine)) {
+      if (
+        eList.length === 0 ||
+        (hasLegacyFormat && typeof navigator !== 'undefined' && navigator.onLine)
+      ) {
         syncManager.triggerSync().catch((err) => {
           console.warn('Auto background upgrade sync error:', err);
         });
       }
 
-      // If local projects are empty and we're online, attempt background Vercel sync
-      if (pList.length === 0 && typeof navigator !== 'undefined' && navigator.onLine) {
-        vercelService.syncProjects().then((res) => {
-          if (res.success && res.projects.length > 0) {
-            setProjects(res.projects);
-            setSelectedProject((prev) => prev || res.projects[0]);
-          }
-        }).catch(() => {});
+      // If local projects are empty OR have legacy ephemeral deployment hash URLs instead of real domains,
+      // trigger an automatic background Vercel sync to upgrade to authoritative domains
+      const hasOldDeploymentUrl = pList.some(
+        (p) =>
+          !p.live_url ||
+          p.live_url.includes('-git-') ||
+          /[a-z0-9]{8,}\.vercel\.app/.test(p.live_url)
+      );
+      if (
+        (pList.length === 0 || hasOldDeploymentUrl) &&
+        typeof navigator !== 'undefined' &&
+        navigator.onLine
+      ) {
+        vercelService
+          .syncProjects()
+          .then((res) => {
+            if (res.success && res.projects.length > 0) {
+              setProjects(res.projects);
+              setSelectedProject((prev) => {
+                if (prev) {
+                  return res.projects.find((p) => p.id === prev.id) || res.projects[0];
+                }
+                return res.projects[0];
+              });
+            }
+          })
+          .catch(() => {});
       }
     }
 
@@ -315,7 +347,8 @@ export function App() {
 
   const displayedCategoryEmails = useMemo(() => {
     const isPrimary = (e: EmailThread) => e.category === 'Primary' || e.category === 'Action';
-    const isUpdates = (e: EmailThread) => e.category === 'Updates' || e.category === 'Dev' || e.category === 'Receipt';
+    const isUpdates = (e: EmailThread) =>
+      e.category === 'Updates' || e.category === 'Dev' || e.category === 'Receipt';
 
     if (categoryTab === 'Primary') return filteredEmails.filter(isPrimary);
     if (categoryTab === 'Updates') return filteredEmails.filter(isUpdates);
@@ -325,8 +358,11 @@ export function App() {
   useEffect(() => {
     if (displayedCategoryEmails.length > 0) {
       if (!selectedEmail || !displayedCategoryEmails.some((e) => e.id === selectedEmail.id)) {
-        const savedId = typeof window !== 'undefined' ? localStorage.getItem('sola_selected_email_id') : null;
-        const matchingSaved = savedId ? displayedCategoryEmails.find((e) => e.id === savedId) : null;
+        const savedId =
+          typeof window !== 'undefined' ? localStorage.getItem('sola_selected_email_id') : null;
+        const matchingSaved = savedId
+          ? displayedCategoryEmails.find((e) => e.id === savedId)
+          : null;
         const next = matchingSaved || displayedCategoryEmails[0];
         setSelectedEmail(next);
         if (typeof window !== 'undefined' && next) {
@@ -424,8 +460,8 @@ export function App() {
                 />
               )}
 
-              {activeTab === 'pulse' && (
-                <PulseFeed
+              {activeTab === 'vercel' && (
+                <VercelFeed
                   projects={projects}
                   selectedId={selectedProject?.id ?? null}
                   onSelect={setSelectedProject}
@@ -442,12 +478,8 @@ export function App() {
               {activeTab === 'inbox' && (
                 <DetailPane item={selectedEmail} type="email" onDeleteEmail={requestDeleteEmails} />
               )}
-              {activeTab === 'vault' && (
-                <DetailPane item={selectedBookmark} type="bookmark" />
-              )}
-              {activeTab === 'pulse' && (
-                <DetailPane item={selectedProject} type="project" />
-              )}
+              {activeTab === 'vault' && <DetailPane item={selectedBookmark} type="bookmark" />}
+              {activeTab === 'vercel' && <DetailPane item={selectedProject} type="project" />}
             </div>
           </>
         )}

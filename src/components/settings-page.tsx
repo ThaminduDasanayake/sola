@@ -1,24 +1,24 @@
-import React, { useState, useEffect, useMemo } from 'react';
 import {
+  ArrowLeft as ArrowLeftIcon,
+  ArrowsClockwise as ArrowsClockwiseIcon,
+  CheckCircle as CheckCircleIcon,
+  Check as CheckIcon,
+  Clock as ClockIcon,
+  Command as CommandIcon,
+  EnvelopeSimple as EnvelopeSimpleIcon,
+  Folder as FolderIcon,
+  Info as InfoIcon,
+  Key as KeyIcon,
+  Sparkle as SparkleIcon,
   SpeakerHigh as SpeakerHighIcon,
   User as UserIcon,
-  Check as CheckIcon,
-  Sparkle as SparkleIcon,
-  EnvelopeSimple as EnvelopeSimpleIcon,
-  Command as CommandIcon,
-  ArrowsClockwise as ArrowsClockwiseIcon,
-  Info as InfoIcon,
-  ArrowLeft as ArrowLeftIcon,
-  Clock as ClockIcon,
-  Folder as FolderIcon,
-  CheckCircle as CheckCircleIcon,
   XCircle as XCircleIcon,
-  Key as KeyIcon,
 } from '@phosphor-icons/react';
-import { ttsService } from '../services/tts';
-import { syncManager } from '../services/sync-manager';
-import { vercelService } from '../services/vercel';
+import React, { useEffect, useMemo, useState } from 'react';
 import { revealDatabaseInFinder } from '../services/db';
+import { syncManager } from '../services/sync-manager';
+import { ttsService } from '../services/tts';
+import { vercelService } from '../services/vercel';
 
 interface SettingsPageProps {
   onBack?: () => void;
@@ -82,7 +82,9 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
   const [vercelToken, setVercelToken] = useState<string>('');
   const [vercelTeamId, setVercelTeamId] = useState<string>('');
   const [isVercelFromEnv, setIsVercelFromEnv] = useState<boolean>(false);
-  const [vercelStatus, setVercelStatus] = useState<'idle' | 'testing' | 'valid' | 'invalid'>('idle');
+  const [vercelStatus, setVercelStatus] = useState<'idle' | 'testing' | 'valid' | 'invalid'>(
+    'idle'
+  );
   const [vercelUser, setVercelUser] = useState<string | null>(null);
   const [vercelError, setVercelError] = useState<string | null>(null);
   const [vercelSaveSuccess, setVercelSaveSuccess] = useState<boolean>(false);
@@ -174,7 +176,8 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
       if (lower.includes('siri')) return 1;
       if (lower.includes('ava') || lower.includes('zoe') || lower.includes('evan')) return 2;
       if (lower.includes('samantha') || lower.includes('daniel')) return 3;
-      if (lower.includes('allison') || lower.includes('nathan') || lower.includes('oliver')) return 4;
+      if (lower.includes('allison') || lower.includes('nathan') || lower.includes('oliver'))
+        return 4;
       return 10;
     };
 
@@ -192,9 +195,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
       ttsService.setSelectedVoiceName(draftVoice);
     }
     ttsService.setRate(draftRate);
-    ttsService.speak(
-      'Good morning. You have three unread messages in your inbox today.'
-    );
+    ttsService.speak('Good morning. You have three unread messages in your inbox today.');
     setTimeout(() => setIsPlayingTest(false), 4000);
   };
 
@@ -322,7 +323,9 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                 : 'text-[#8e8e93] hover:text-[#d1d1d6] hover:bg-white/[0.05]'
             }`}
           >
-            <span className={`w-4 h-4 flex items-center justify-center font-bold text-[12px] ${activeSection === 'vercel' ? 'text-[#e5a93c]' : 'text-[#8e8e93]'}`}>
+            <span
+              className={`w-4 h-4 flex items-center justify-center font-bold text-[12px] ${activeSection === 'vercel' ? 'text-[#e5a93c]' : 'text-[#8e8e93]'}`}
+            >
               ▲
             </span>
             <span>Deployments (Vercel)</span>
@@ -353,8 +356,8 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
               isSavedRecently
                 ? 'bg-[#30d158]/20 text-[#30d158] border border-[#30d158]/30 cursor-default'
                 : hasChanges
-                ? 'bg-[#e5a93c] hover:bg-[#d4972d] text-black cursor-pointer active:scale-[0.98]'
-                : 'bg-white/[0.05] text-[#636366] border border-white/[0.04] cursor-not-allowed opacity-50'
+                  ? 'bg-[#e5a93c] hover:bg-[#d4972d] text-black cursor-pointer active:scale-[0.98]'
+                  : 'bg-white/[0.05] text-[#636366] border border-white/[0.04] cursor-not-allowed opacity-50'
             }`}
           >
             <CheckIcon className="w-3.5 h-3.5" weight="bold" />
@@ -442,9 +445,17 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                 <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-4 text-[12px] text-[#8e8e93] leading-relaxed flex items-start gap-3">
                   <SparkleIcon className="w-4 h-4 text-[#e5a93c] shrink-0 mt-0.5" />
                   <div>
-                    <span className="text-[#f5f5f7] font-medium">How to get Siri AI voices on your Mac:</span>
+                    <span className="text-[#f5f5f7] font-medium">
+                      How to get Siri AI voices on your Mac:
+                    </span>
                     <p className="mt-1">
-                      Open <strong className="text-[#d1d1d6]">System Settings</strong> → <strong className="text-[#d1d1d6]">Accessibility</strong> → <strong className="text-[#d1d1d6]">Spoken Content</strong> → <strong className="text-[#d1d1d6]">System Voice</strong> → <strong className="text-[#d1d1d6]">Manage Voices...</strong>. Download any <em>Siri</em> voice or <em>Ava (Premium)</em>, and Sola will display them right at the top.
+                      Open <strong className="text-[#d1d1d6]">System Settings</strong> →{' '}
+                      <strong className="text-[#d1d1d6]">Accessibility</strong> →{' '}
+                      <strong className="text-[#d1d1d6]">Spoken Content</strong> →{' '}
+                      <strong className="text-[#d1d1d6]">System Voice</strong> →{' '}
+                      <strong className="text-[#d1d1d6]">Manage Voices...</strong>. Download any{' '}
+                      <em>Siri</em> voice or <em>Ava (Premium)</em>, and Sola will display them
+                      right at the top.
                     </p>
                   </div>
                 </div>
@@ -477,7 +488,8 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                           Daily 5:30 AM Auto-Sync
                         </span>
                         <p className="text-[11.5px] text-[#8e8e93] mt-0.5">
-                          Automatically pulls fresh emails every morning at 5:30 AM before your day starts.
+                          Automatically pulls fresh emails every morning at 5:30 AM before your day
+                          starts.
                         </p>
                       </div>
                     </div>
@@ -540,7 +552,10 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                     </div>
                   </div>
                   <p className="text-[11.5px] text-[#8e8e93] mt-2 leading-relaxed">
-                    Credentials are stored securely in your local <code className="text-[#e5a93c]">.env</code> file (<code className="text-[#e5a93c]">GMAIL_1_EMAIL</code>, <code className="text-[#e5a93c]">GMAIL_2_EMAIL</code>).
+                    Credentials are stored securely in your local{' '}
+                    <code className="text-[#e5a93c]">.env</code> file (
+                    <code className="text-[#e5a93c]">GMAIL_1_EMAIL</code>,{' '}
+                    <code className="text-[#e5a93c]">GMAIL_2_EMAIL</code>).
                   </p>
                 </div>
 
@@ -557,7 +572,9 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                       disabled={isSyncing}
                       className="h-8 px-4 rounded-full bg-white/[0.08] hover:bg-white/[0.14] border border-white/[0.08] text-[12px] font-medium text-[#f5f5f7] flex items-center gap-1.5 transition-colors disabled:opacity-50"
                     >
-                      <ArrowsClockwiseIcon className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-[#e5a93c]' : ''}`} />
+                      <ArrowsClockwiseIcon
+                        className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-[#e5a93c]' : ''}`}
+                      />
                       <span>{isSyncing ? 'Syncing...' : 'Sync Inboxes Now'}</span>
                     </button>
                   </div>
@@ -571,10 +588,11 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
             <div className="space-y-6">
               <div>
                 <h2 className="text-[20px] font-semibold text-[#f5f5f7] tracking-tight">
-                  Vercel Deployments & Pulse
+                  Vercel Dashboard
                 </h2>
                 <p className="text-[13px] text-[#8e8e93] mt-1">
-                  Connect your Vercel account to monitor deployments and preview status in Pulse.
+                  Connect your Vercel account to monitor deployments and preview status in the
+                  Vercel dashboard.
                 </p>
               </div>
 
@@ -587,7 +605,9 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                     </span>
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="text-[13px] font-medium text-[#f5f5f7]">Vercel REST API</span>
+                        <span className="text-[13px] font-medium text-[#f5f5f7]">
+                          Vercel REST API
+                        </span>
                         {isVercelFromEnv && (
                           <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#e5a93c]/15 text-[#e5a93c] border border-[#e5a93c]/30">
                             Loaded from .env
@@ -598,10 +618,10 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                         {vercelStatus === 'valid'
                           ? `Authenticated as ${vercelUser || 'Vercel User'}`
                           : vercelStatus === 'testing'
-                          ? 'Checking credentials...'
-                          : vercelStatus === 'invalid'
-                          ? (vercelError || 'Authentication failed')
-                          : 'Enter your Personal Access Token below'}
+                            ? 'Checking credentials...'
+                            : vercelStatus === 'invalid'
+                              ? vercelError || 'Authentication failed'
+                              : 'Enter your Personal Access Token below'}
                       </p>
                     </div>
                   </div>
@@ -649,7 +669,9 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                     className="w-full bg-[#28282b] text-[12.5px] text-[#f5f5f7] px-3.5 py-2.5 rounded-xl border border-white/[0.08] focus:outline-none focus:ring-1 focus:ring-white/20 font-mono"
                   />
                   <p className="text-[11px] text-[#8e8e93]">
-                    Token is kept locally on your Mac. You can also specify it in <code className="text-[#e5a93c]">.env</code> as <code className="text-[#e5a93c]">VERCEL_API_TOKEN</code>.
+                    Token is kept locally on your Mac. You can also specify it in{' '}
+                    <code className="text-[#e5a93c]">.env</code> as{' '}
+                    <code className="text-[#e5a93c]">VERCEL_API_TOKEN</code>.
                   </p>
                 </div>
 
@@ -694,8 +716,14 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                       disabled={vercelStatus === 'testing' || isSyncingVercel}
                       className="h-8 px-4 rounded-full bg-[#e5a93c] text-[#141416] hover:brightness-110 text-[12px] font-semibold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer disabled:opacity-50"
                     >
-                      <ArrowsClockwiseIcon className={`w-3.5 h-3.5 ${vercelStatus === 'testing' || isSyncingVercel ? 'animate-spin' : ''}`} />
-                      <span>{vercelStatus === 'testing' || isSyncingVercel ? 'Connecting...' : 'Test & Sync Now'}</span>
+                      <ArrowsClockwiseIcon
+                        className={`w-3.5 h-3.5 ${vercelStatus === 'testing' || isSyncingVercel ? 'animate-spin' : ''}`}
+                      />
+                      <span>
+                        {vercelStatus === 'testing' || isSyncingVercel
+                          ? 'Connecting...'
+                          : 'Test & Sync Now'}
+                      </span>
                     </button>
                   </div>
                 </div>
@@ -722,21 +750,29 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                 <div className="space-y-2 text-[12.5px]">
                   <div className="flex items-center justify-between py-1.5 border-b border-white/[0.04]">
                     <span className="text-[#d1d1d6]">Global Search</span>
-                    <kbd className="px-2 py-0.5 rounded-md bg-white/[0.08] font-mono text-[11px] text-[#f5f5f7]">⌘K</kbd>
+                    <kbd className="px-2 py-0.5 rounded-md bg-white/[0.08] font-mono text-[11px] text-[#f5f5f7]">
+                      ⌘K
+                    </kbd>
                   </div>
                   <div className="flex items-center justify-between py-1.5 border-b border-white/[0.04]">
                     <span className="text-[#d1d1d6]">Quick Add Bookmark</span>
-                    <kbd className="px-2 py-0.5 rounded-md bg-white/[0.08] font-mono text-[11px] text-[#f5f5f7]">⌘B</kbd>
+                    <kbd className="px-2 py-0.5 rounded-md bg-white/[0.08] font-mono text-[11px] text-[#f5f5f7]">
+                      ⌘B
+                    </kbd>
                   </div>
                   <div className="flex items-center justify-between py-1.5 border-b border-white/[0.04]">
                     <span className="text-[#d1d1d6]">Toggle Settings</span>
-                    <kbd className="px-2 py-0.5 rounded-md bg-white/[0.08] font-mono text-[11px] text-[#f5f5f7]">⌘,</kbd>
+                    <kbd className="px-2 py-0.5 rounded-md bg-white/[0.08] font-mono text-[11px] text-[#f5f5f7]">
+                      ⌘,
+                    </kbd>
                   </div>
                 </div>
 
                 <div className="pt-4 border-t border-white/[0.06] flex items-center justify-between">
                   <div>
-                    <span className="text-[12.5px] font-medium text-[#f5f5f7]">Local Database (`sola.db`)</span>
+                    <span className="text-[12.5px] font-medium text-[#f5f5f7]">
+                      Local Database (`sola.db`)
+                    </span>
                     <p className="text-[11.5px] text-[#8e8e93] mt-0.5">
                       Stored in Application Support and linked directly to your project folder.
                     </p>
@@ -755,7 +791,9 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                   <div>
                     <span className="text-[#f5f5f7] font-medium">Sola Desktop v0.1.0</span>
                     <p className="mt-0.5 leading-relaxed">
-                      Built with Tauri v2, SQLite with Full-Text Search (FTS5), React 19, and local Apple Speech Synthesis. All your emails and bookmarks remain 100% on your machine.
+                      Built with Tauri v2, SQLite with Full-Text Search (FTS5), React 19, and local
+                      Apple Speech Synthesis. All your emails and bookmarks remain 100% on your
+                      machine.
                     </p>
                   </div>
                 </div>

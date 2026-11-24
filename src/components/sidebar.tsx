@@ -1,10 +1,10 @@
-import React from 'react';
 import {
-  Envelope as EnvelopeIcon,
   BookmarkSimple as BookmarkSimpleIcon,
-  Pulse as PulseIcon,
+  Envelope as EnvelopeIcon,
   GearSix as GearSixIcon,
+  Triangle as TriangleIcon,
 } from '@phosphor-icons/react';
+import React from 'react';
 import type { ActiveTab } from '../types';
 
 interface SidebarProps {
@@ -37,9 +37,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
       count: bookmarkCount > 0 ? bookmarkCount : undefined,
     },
     {
-      id: 'pulse' as const,
-      label: 'Pulse',
-      icon: PulseIcon,
+      id: 'vercel' as const,
+      label: 'Vercel',
+      icon: TriangleIcon,
     },
   ];
 
@@ -104,9 +104,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <span>{item.label}</span>
               </div>
               {item.count !== undefined && item.count > 0 && (
-                <span className="text-[12px] font-normal text-[#8e8e93]">
-                  {item.count}
-                </span>
+                <span className="text-[12px] font-normal text-[#8e8e93]">{item.count}</span>
               )}
             </button>
           );

@@ -7,11 +7,7 @@ interface QuickAddModalProps {
   onAdd: (bookmark: Omit<Bookmark, 'id' | 'created_at'>) => void;
 }
 
-export const QuickAddModal: React.FC<QuickAddModalProps> = ({
-  isOpen,
-  onClose,
-  onAdd,
-}) => {
+export const QuickAddModal: React.FC<QuickAddModalProps> = ({ isOpen, onClose, onAdd }) => {
   const [url, setUrl] = useState('');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -62,15 +58,11 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="bg-[#212125] border border-white/10 rounded-xl w-full max-w-sm shadow-2xl overflow-hidden p-5 space-y-4">
-        <h3 className="text-[14px] font-semibold text-[#f7f7f8]">
-          Add Bookmark
-        </h3>
+        <h3 className="text-[14px] font-semibold text-[#f7f7f8]">Add Bookmark</h3>
 
         <form onSubmit={handleSubmit} className="space-y-3.5">
           <div>
-            <label className="block text-[11px] font-medium text-[#86868b] mb-1">
-              URL
-            </label>
+            <label className="block text-[11px] font-medium text-[#86868b] mb-1">URL</label>
             <input
               type="text"
               autoFocus
@@ -84,9 +76,7 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
           </div>
 
           <div>
-            <label className="block text-[11px] font-medium text-[#86868b] mb-1">
-              Title
-            </label>
+            <label className="block text-[11px] font-medium text-[#86868b] mb-1">Title</label>
             <input
               type="text"
               value={title}
@@ -97,9 +87,7 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
           </div>
 
           <div>
-            <label className="block text-[11px] font-medium text-[#86868b] mb-1">
-              Tags
-            </label>
+            <label className="block text-[11px] font-medium text-[#86868b] mb-1">Tags</label>
             <input
               type="text"
               value={tagsInput}
@@ -110,9 +98,7 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
           </div>
 
           <div>
-            <label className="block text-[11px] font-medium text-[#86868b] mb-1">
-              Notes
-            </label>
+            <label className="block text-[11px] font-medium text-[#86868b] mb-1">Notes</label>
             <textarea
               rows={2}
               value={description}

@@ -20,7 +20,10 @@ export function cleanTextForSpeech(text: string): string {
   let cleaned = text;
 
   // 1. Remove markdown images and newsletter image metadata lines
-  cleaned = cleaned.replace(/^(?:view\s+image|follow\s+image\s+link|caption|image|photo)\s*:\s*.*$/gim, '');
+  cleaned = cleaned.replace(
+    /^(?:view\s+image|follow\s+image\s+link|caption|image|photo)\s*:\s*.*$/gim,
+    ''
+  );
   cleaned = cleaned.replace(/!\[[^\]]*\]\([^)]*\)/g, '');
 
   // 2. Extract anchor text from markdown links: [Anchor Text](https://...) -> Anchor Text
@@ -33,11 +36,20 @@ export function cleanTextForSpeech(text: string): string {
 
   // 4. Remove all emojis and special pictographs
   cleaned = cleaned.replace(/\p{Extended_Pictographic}/gu, ' ');
-  cleaned = cleaned.replace(/[\u{1F300}-\u{1F9FF}\u{1F600}-\u{1F64F}\u{2600}-\u{27BF}\u{1F1E6}-\u{1F1FF}]/gu, ' ');
+  cleaned = cleaned.replace(
+    /[\u{1F300}-\u{1F9FF}\u{1F600}-\u{1F64F}\u{2600}-\u{27BF}\u{1F1E6}-\u{1F1FF}]/gu,
+    ' '
+  );
 
   // 5. Remove newsletter navigation and boilerplate headers/footers
-  cleaned = cleaned.replace(/^(?:unsubscribe|manage\s+preferences|update\s+preferences|view\s+in\s+browser|read\s+online|read\s+on\s+.*|read\s+in\s+app|share\s+this\s+post|forwarded\s+this\s+email\?).*$/gim, '');
-  cleaned = cleaned.replace(/^(?:click\s+here\s+to\s+unsubscribe|to\s+unsubscribe\s+or\s+change\s+your\s+email\s+settings|sponsored\s+by.*).*$/gim, '');
+  cleaned = cleaned.replace(
+    /^(?:unsubscribe|manage\s+preferences|update\s+preferences|view\s+in\s+browser|read\s+online|read\s+on\s+.*|read\s+in\s+app|share\s+this\s+post|forwarded\s+this\s+email\?).*$/gim,
+    ''
+  );
+  cleaned = cleaned.replace(
+    /^(?:click\s+here\s+to\s+unsubscribe|to\s+unsubscribe\s+or\s+change\s+your\s+email\s+settings|sponsored\s+by.*).*$/gim,
+    ''
+  );
 
   // 6. Clean markdown formatting
   cleaned = cleaned.replace(/^#{1,6}\s+(.+)$/gm, '$1');
@@ -50,7 +62,10 @@ export function cleanTextForSpeech(text: string): string {
   cleaned = cleaned.replace(/^[\s*•\-–—]+\s*/gm, '');
 
   // 7. Natural phrasing adjustments for spoken speech
-  cleaned = cleaned.replace(/\$([0-9]+(?:\.[0-9]+)?)\s*\/\s*(?:mo|month)\b/gi, '$1 dollars a month');
+  cleaned = cleaned.replace(
+    /\$([0-9]+(?:\.[0-9]+)?)\s*\/\s*(?:mo|month)\b/gi,
+    '$1 dollars a month'
+  );
   cleaned = cleaned.replace(/\$([0-9]+(?:\.[0-9]+)?)\s*\/\s*(?:yr|year)\b/gi, '$1 dollars a year');
   cleaned = cleaned.replace(/\$([0-9]+(?:\.[0-9]+)?)\b/g, '$1 dollars');
   cleaned = cleaned.replace(/&amp;/gi, ' and ');
@@ -92,7 +107,10 @@ export function cleanTextForSpeech(text: string): string {
  * to avoid WebKit SpeechSynthesis utterance pauses/timeouts.
  */
 export function splitIntoSpokenChunks(text: string): string[] {
-  const paragraphs = text.split(/\n+/).map((p) => p.trim()).filter(Boolean);
+  const paragraphs = text
+    .split(/\n+/)
+    .map((p) => p.trim())
+    .filter(Boolean);
   const chunks: string[] = [];
 
   for (const para of paragraphs) {
@@ -104,7 +122,7 @@ export function splitIntoSpokenChunks(text: string): string[] {
       for (const s of sentences) {
         const trimmed = s.trim();
         if (!trimmed) continue;
-        if (current && (current.length + trimmed.length) > 140) {
+        if (current && current.length + trimmed.length > 140) {
           chunks.push(current);
           current = trimmed;
         } else {
@@ -247,7 +265,8 @@ class TTSService {
     // 1. Enhanced or Premium Siri / Neural voices (highest quality on macOS)
     const enhanced = pool.find((v) => {
       const n = v.name.toLowerCase();
-      const isHighQuality = n.includes('enhanced') || n.includes('premium') || n.includes('natural');
+      const isHighQuality =
+        n.includes('enhanced') || n.includes('premium') || n.includes('natural');
       return (
         isHighQuality &&
         (n.includes('ava') ||

@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
 import { Trash as TrashIcon } from '@phosphor-icons/react';
+import React, { useEffect } from 'react';
 
 interface DeleteConfirmDialogProps {
   isOpen: boolean;

@@ -49,4 +49,4 @@ export interface ProjectTelemetry {
   };
 }
 
-export type ActiveTab = 'inbox' | 'vault' | 'pulse' | 'settings';
+export type ActiveTab = 'inbox' | 'vault' | 'vercel' | 'settings';

@@ -1,23 +1,23 @@
-import React, { useState, useEffect } from 'react';
 import {
   ArrowSquareOut as ArrowSquareOutIcon,
-  SpeakerHigh as SpeakerHighIcon,
-  Copy as CopyIcon,
   Check as CheckIcon,
-  User as UserIcon,
-  Trash as TrashIcon,
-  Play as PlayIcon,
-  Pause as PauseIcon,
-  SkipForward as SkipForwardIcon,
-  SkipBack as SkipBackIcon,
-  Stop as StopIcon,
+  Code as CodeIcon,
+  Copy as CopyIcon,
   GitBranch as GitBranchIcon,
   Globe as GlobeIcon,
-  Code as CodeIcon,
+  Pause as PauseIcon,
+  Play as PlayIcon,
+  SkipBack as SkipBackIcon,
+  SkipForward as SkipForwardIcon,
+  SpeakerHigh as SpeakerHighIcon,
+  Stop as StopIcon,
+  Trash as TrashIcon,
+  User as UserIcon,
 } from '@phosphor-icons/react';
-import { ttsService, TTSState } from '../services/tts';
-import { HtmlEmailViewer } from './html-email-viewer';
+import React, { useEffect, useState } from 'react';
+import { TTSState, ttsService } from '../services/tts';
 import type { Bookmark, EmailThread, ProjectTelemetry } from '../types';
+import { HtmlEmailViewer } from './html-email-viewer';
 
 interface DetailPaneProps {
   item: Bookmark | EmailThread | ProjectTelemetry | null;
@@ -73,7 +73,11 @@ export const DetailPane: React.FC<DetailPaneProps> = ({ item, type, onDeleteEmai
               className="h-7 px-3 rounded-full flex items-center gap-1 text-[12px] text-[#8e8e93] hover:text-[#f5f5f7] hover:bg-white/[0.08] transition-colors"
               title="Copy URL"
             >
-              {copied ? <CheckIcon className="w-3.5 h-3.5 text-[#30d158]" /> : <CopyIcon className="w-3.5 h-3.5" />}
+              {copied ? (
+                <CheckIcon className="w-3.5 h-3.5 text-[#30d158]" />
+              ) : (
+                <CopyIcon className="w-3.5 h-3.5" />
+              )}
               <span>{copied ? 'Copied' : 'Copy'}</span>
             </button>
             <button
@@ -93,7 +97,8 @@ export const DetailPane: React.FC<DetailPaneProps> = ({ item, type, onDeleteEmai
               {bookmark.title}
             </h1>
             <p className="text-[12px] text-[#8e8e93] mt-1.5 font-normal">
-              Added {new Date(bookmark.created_at).toLocaleDateString([], {
+              Added{' '}
+              {new Date(bookmark.created_at).toLocaleDateString([], {
                 month: 'long',
                 day: 'numeric',
                 year: 'numeric',
@@ -102,26 +107,20 @@ export const DetailPane: React.FC<DetailPaneProps> = ({ item, type, onDeleteEmai
           </div>
 
           {bookmark.description && (
-            <p className="text-[14px] text-[#d6d6dc] leading-relaxed">
-              {bookmark.description}
-            </p>
+            <p className="text-[14px] text-[#d6d6dc] leading-relaxed">{bookmark.description}</p>
           )}
 
           {bookmark.ai_notes && (
             <div className="pt-4 border-t border-white/[0.06] space-y-2">
               <h3 className="text-[12px] font-medium text-[#e5a93c]">Notes</h3>
-              <p className="text-[13px] text-[#d6d6dc] leading-relaxed">
-                {bookmark.ai_notes}
-              </p>
+              <p className="text-[13px] text-[#d6d6dc] leading-relaxed">{bookmark.ai_notes}</p>
             </div>
           )}
 
           {bookmark.tags && bookmark.tags.length > 0 && (
             <div className="pt-4 border-t border-white/[0.06] flex items-center gap-2">
               <span className="text-[12px] text-[#8e8e93]">Tags:</span>
-              <span className="text-[12px] text-[#e5a93c]/90">
-                {bookmark.tags.join(', ')}
-              </span>
+              <span className="text-[12px] text-[#e5a93c]/90">{bookmark.tags.join(', ')}</span>
             </div>
           )}
         </div>
@@ -252,10 +251,12 @@ export const DetailPane: React.FC<DetailPaneProps> = ({ item, type, onDeleteEmai
             <div className="space-y-1.5 mt-2.5">
               <div className="flex items-center justify-between text-[12px] text-[#8e8e93]">
                 <span className="text-[#f5f5f7] font-medium select-text">{email.sender}</span>
-                <span>{new Date(email.received_at).toLocaleString([], {
-                  dateStyle: 'medium',
-                  timeStyle: 'short',
-                })}</span>
+                <span>
+                  {new Date(email.received_at).toLocaleString([], {
+                    dateStyle: 'medium',
+                    timeStyle: 'short',
+                  })}
+                </span>
               </div>
               {email.account_email && (
                 <div className="flex items-center gap-1.5 text-[11.5px] text-[#8e8e93]">
@@ -394,7 +395,11 @@ export const DetailPane: React.FC<DetailPaneProps> = ({ item, type, onDeleteEmai
               className="h-7 px-2.5 rounded-full flex items-center gap-1 text-[12px] text-[#8e8e93] hover:text-[#f5f5f7] hover:bg-white/[0.08] transition-colors cursor-pointer"
               title="Copy Permanent Site URL"
             >
-              {copied ? <CheckIcon className="w-3.5 h-3.5 text-[#30d158]" /> : <CopyIcon className="w-3.5 h-3.5" />}
+              {copied ? (
+                <CheckIcon className="w-3.5 h-3.5 text-[#30d158]" />
+              ) : (
+                <CopyIcon className="w-3.5 h-3.5" />
+              )}
               <span>{copied ? 'Copied' : 'Copy Site URL'}</span>
             </button>
             <button
@@ -468,7 +473,9 @@ export const DetailPane: React.FC<DetailPaneProps> = ({ item, type, onDeleteEmai
             {/* Card 1: Permanent Site URL */}
             <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.06] space-y-2.5">
               <div className="flex items-center justify-between text-[11px] text-[#8e8e93]">
-                <span className="uppercase tracking-wider font-semibold">Live Site URL (Permanent)</span>
+                <span className="uppercase tracking-wider font-semibold">
+                  Live Site URL (Permanent)
+                </span>
                 <GlobeIcon className="w-3.5 h-3.5 text-[#30d158]" />
               </div>
               <a
@@ -509,7 +516,8 @@ export const DetailPane: React.FC<DetailPaneProps> = ({ item, type, onDeleteEmai
 
               {project.last_deployment_at && (
                 <p className="text-[11px] text-[#8e8e93] pt-1">
-                  Updated {new Date(project.last_deployment_at).toLocaleString([], {
+                  Updated{' '}
+                  {new Date(project.last_deployment_at).toLocaleString([], {
                     dateStyle: 'medium',
                     timeStyle: 'short',
                   })}
@@ -527,9 +535,16 @@ export const DetailPane: React.FC<DetailPaneProps> = ({ item, type, onDeleteEmai
                 {project.last_commit_message || 'No commit message attached to latest build.'}
               </p>
               <div className="flex items-center justify-between text-[11px] text-[#8e8e93] pt-1 border-t border-white/[0.04]">
-                <span>Branch: <strong className="text-[#d1d1d6] font-mono">{project.last_commit_branch || 'main'}</strong></span>
+                <span>
+                  Branch:{' '}
+                  <strong className="text-[#d1d1d6] font-mono">
+                    {project.last_commit_branch || 'main'}
+                  </strong>
+                </span>
                 {project.last_commit_author && (
-                  <span>by <strong className="text-[#d1d1d6]">{project.last_commit_author}</strong></span>
+                  <span>
+                    by <strong className="text-[#d1d1d6]">{project.last_commit_author}</strong>
+                  </span>
                 )}
               </div>
             </div>
@@ -538,16 +553,21 @@ export const DetailPane: React.FC<DetailPaneProps> = ({ item, type, onDeleteEmai
           {/* Telemetry & Health Info */}
           <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/[0.04] space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-[12.5px] font-medium text-[#f5f5f7]">Infrastructure & Telemetry</span>
+              <span className="text-[12.5px] font-medium text-[#f5f5f7]">
+                Infrastructure & Telemetry
+              </span>
               <span className="text-[11px] font-mono text-[#8e8e93]">
-                Checked {new Date(project.last_checked_at).toLocaleTimeString([], { timeStyle: 'short' })}
+                Checked{' '}
+                {new Date(project.last_checked_at).toLocaleTimeString([], { timeStyle: 'short' })}
               </span>
             </div>
 
             <div className="grid grid-cols-3 gap-3 text-[12px]">
               <div className="p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.03]">
                 <span className="text-[11px] text-[#8e8e93] block">Edge Network</span>
-                <span className="text-[#f5f5f7] font-medium mt-0.5 block">Vercel Global Anycast</span>
+                <span className="text-[#f5f5f7] font-medium mt-0.5 block">
+                  Vercel Global Anycast
+                </span>
               </div>
               <div className="p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.03]">
                 <span className="text-[11px] text-[#8e8e93] block">SSL / TLS</span>

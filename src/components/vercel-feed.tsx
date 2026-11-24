@@ -1,14 +1,15 @@
-import React from 'react';
 import {
   ArrowsClockwise as ArrowsClockwiseIcon,
+  Gear as GearIcon,
   GitBranch as GitBranchIcon,
   Globe as GlobeIcon,
+  Triangle as TriangleIcon,
   WarningCircle as WarningCircleIcon,
-  Gear as GearIcon,
 } from '@phosphor-icons/react';
+import React from 'react';
 import type { ProjectTelemetry } from '../types';
 
-interface PulseFeedProps {
+export interface VercelFeedProps {
   projects: ProjectTelemetry[];
   selectedId: number | null;
   onSelect: (project: ProjectTelemetry) => void;
@@ -18,10 +19,13 @@ interface PulseFeedProps {
   syncError?: string | null;
 }
 
+// Backward-compatible alias
+export type PulseFeedProps = VercelFeedProps;
+
 function formatRelativeTime(dateStr?: string): string {
   if (!dateStr) return '';
   const date = new Date(dateStr);
-  if (isNaN(date.getTime())) return '';
+  if (Number.isNaN(date.getTime())) return '';
 
   const diffMs = Date.now() - date.getTime();
   const diffSec = Math.floor(diffMs / 1000);
@@ -37,7 +41,7 @@ function formatRelativeTime(dateStr?: string): string {
   return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
 }
 
-export const PulseFeed: React.FC<PulseFeedProps> = ({
+export const VercelFeed: React.FC<VercelFeedProps> = ({
   projects,
   selectedId,
   onSelect,
@@ -50,8 +54,11 @@ export const PulseFeed: React.FC<PulseFeedProps> = ({
     <div className="flex-1 flex flex-col overflow-hidden bg-[#18181a] select-none">
       {/* Feed Sub-Header */}
       <div className="h-10 px-3.5 border-b border-white/[0.06] flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-1.5">
-          <span className="text-[12px] font-semibold text-[#f5f5f7]">Vercel Deployments</span>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
+            <TriangleIcon className="w-3 h-3 text-[#f5f5f7]" weight="fill" />
+            <span className="text-[12px] font-semibold text-[#f5f5f7]">Vercel Projects</span>
+          </div>
           <span className="text-[11px] font-mono text-[#8e8e93] px-1.5 py-0.2 rounded-full bg-white/[0.06]">
             {projects.length}
           </span>
@@ -64,7 +71,9 @@ export const PulseFeed: React.FC<PulseFeedProps> = ({
             className="w-7 h-7 rounded-full flex items-center justify-center text-[#8e8e93] hover:text-[#f5f5f7] hover:bg-white/[0.08] transition-colors disabled:opacity-40 cursor-pointer"
             title="Refresh Vercel deployments"
           >
-            <ArrowsClockwiseIcon className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-[#e5a93c]' : ''}`} />
+            <ArrowsClockwiseIcon
+              className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-[#e5a93c]' : ''}`}
+            />
           </button>
         )}
       </div>
@@ -80,7 +89,7 @@ export const PulseFeed: React.FC<PulseFeedProps> = ({
       {projects.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
           <div className="w-10 h-10 rounded-2xl bg-white/[0.04] border border-white/[0.06] flex items-center justify-center text-[#f5f5f7] mb-3 shadow-inner">
-            <span className="text-[16px] font-bold">▲</span>
+            <TriangleIcon className="w-5 h-5 text-white" weight="fill" />
           </div>
           <p className="text-[13px] font-medium text-[#d1d1d6]">No Vercel Projects Found</p>
           <p className="text-[11.5px] text-[#636366] mt-1 max-w-[200px] leading-relaxed">
@@ -94,8 +103,10 @@ export const PulseFeed: React.FC<PulseFeedProps> = ({
                 disabled={isSyncing}
                 className="w-full py-1.5 px-3 rounded-full bg-white/[0.08] hover:bg-white/[0.14] border border-white/[0.08] text-[12px] font-medium text-[#f5f5f7] flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
               >
-                <ArrowsClockwiseIcon className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-[#e5a93c]' : ''}`} />
-                <span>{isSyncing ? 'Syncing...' : 'Sync Deployments'}</span>
+                <ArrowsClockwiseIcon
+                  className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-[#e5a93c]' : ''}`}
+                />
+                <span>{isSyncing ? 'Syncing...' : 'Sync Projects'}</span>
               </button>
             )}
 
@@ -199,3 +210,6 @@ export const PulseFeed: React.FC<PulseFeedProps> = ({
     </div>
   );
 };
+
+// Backward-compatible alias
+export const PulseFeed = VercelFeed;
